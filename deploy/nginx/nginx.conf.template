@@ -1,0 +1,270 @@
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       C:/nginx/conf/mime.types;
+    default_type  application/octet-stream;
+
+    server_names_hash_bucket_size 64;
+
+    sendfile        on;
+    tcp_nopush      on;
+    tcp_nodelay     on;
+    keepalive_timeout  65;
+
+    proxy_connect_timeout 1s;
+
+    log_format timing '$remote_addr - [$time_local] "$request" $status '
+                       'rt=$request_time uct=$upstream_connect_time urt=$upstream_response_time '
+                       'upstream=$upstream_addr';
+
+    open_file_cache max=2000 inactive=30s;
+    open_file_cache_valid 60s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors off;
+
+    server_tokens off;
+
+    gzip on;
+    gzip_comp_level 6;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/x-javascript
+        application/json
+        application/xml
+        application/xml+rss
+        image/svg+xml;
+
+    proxy_cache_path C:/nginx/proxy_cache levels=1:2 keys_zone=api_cache:20m max_size=200m inactive=10m use_temp_path=off;
+
+    proxy_cache_key "$scheme$host$request_uri";
+
+    upstream pastellive_backend {
+        server 127.0.0.1:8081 max_fails=2 fail_timeout=15s;
+        keepalive 64;
+    }
+
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    map "$http_accept:$uri" $avif_candidate {
+        default "";
+        "~*^.*image/avif.*:(?<pfx>/static/.+)\.webp$" "${pfx}.avif";
+    }
+
+    server {
+        listen       80;
+        server_name  localhost pastellive.co.kr www.pastellive.co.kr m.pastellive.co.kr;
+
+        access_log  C:/nginx/logs/timing.log  timing;
+
+        root __PROJECT_DIR__;
+
+        client_max_body_size 130M;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+
+        if ($http_user_agent ~* (GenomeCrawler|ZmEu|sqlmap|nikto|scan|curl|wget|python-requests|libredtail-http|CensysInspect|zgrab)) {
+            return 444;
+        }
+
+        if ($request_uri ~* "(wget|chmod|rm\s-rf|/bin/sh|cmd\.exe|eval\()") {
+            return 444;
+        }
+
+        location ~* (/\.env|/\.git|/wp-login\.php|/wp-admin|/phpunit|/cgi-bin|/actuator|/docker-compose|/config\.json|/status\.php) {
+            return 444;
+        }
+
+        location = /static/manifest.json {
+            alias __STATIC_DIR__/manifest.json;
+            default_type application/manifest+json;
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location /static/ {
+            alias __STATIC_DIR__/;
+            access_log off;
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location ~* ^/static/(.+)\.webp$ {
+            add_header Vary Accept always;
+            add_header Cache-Control "no-cache" always;
+            access_log off;
+            try_files $avif_candidate $uri =404;
+        }
+
+        location ~ ^/api/videos/(random_scroll|recommend_random|home_shorts)$ {
+            proxy_pass http://pastellive_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+            add_header X-Cache-Status "BYPASS-RANDOM";
+        }
+
+        location ~ ^/api/(videos/|live_status$|drive_video_title/|search$|search/trending$|kirinuki/videos$) {
+            proxy_pass http://pastellive_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+
+            proxy_cache api_cache;
+            proxy_cache_valid 200 30s;
+            proxy_cache_use_stale error timeout updating http_500 http_502 http_503;
+            proxy_cache_bypass $cookie_session;
+            proxy_no_cache $cookie_session;
+            add_header X-Cache-Status $upstream_cache_status;
+        }
+
+        location ~ ^/api/drive_thumb/([a-zA-Z0-9_-]+)$ {
+            root __STATIC_DIR__;
+            try_files /drive_thumbs/$1.jpg @drive_thumb_proxy;
+        }
+        location @drive_thumb_proxy {
+            internal;
+            proxy_pass http://pastellive_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        location / {
+            proxy_pass http://pastellive_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   C:/nginx/html;
+        }
+    }
+
+    server {
+        listen       80;
+        server_name  admin.pastellive.co.kr;
+
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+
+        location /static/ {
+            alias __STATIC_DIR__/;
+            access_log off;
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location / {
+            proxy_pass http://pastellive_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   C:/nginx/html;
+        }
+    }
+
+    server {
+        listen       80;
+        server_name  api.pastellive.co.kr;
+
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
+
+        location /static/ {
+            alias __STATIC_DIR__/;
+            access_log off;
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location / {
+            proxy_pass http://pastellive_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   C:/nginx/html;
+        }
+    }
+
+    server {
+        listen       80;
+        server_name  restore.pastellive.co.kr;
+
+        location / {
+            proxy_pass http://127.0.0.1:25565;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+    }
+
+    server {
+        listen       80;
+        server_name  world.pastellive.co.kr;
+
+        client_max_body_size 130M;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+
+        location /static/ {
+            alias __STATIC_DIR__/;
+            access_log off;
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location / {
+            proxy_pass http://pastellive_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   C:/nginx/html;
+        }
+    }
+
+}

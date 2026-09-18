@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  go:
+    name: Go build / vet / fmt / test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go-server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # source only - the committed .exe/.onnx/.dll LFS blobs aren't needed to
+          # build or test the Go code, and pulling them just slows CI down.
+          lfs: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go-server/go.mod
+
+      - name: gofmt check
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build (native)
+        run: go build -buildvcs=false ./...
+
+      - name: go build (windows/amd64 - matches production target)
+        run: GOOS=windows GOARCH=amd64 go build -buildvcs=false -o /tmp/ci-windows-build/ ./...
+        env:
+          CGO_ENABLED: 0
+
+      - name: go test
+        run: go test -buildvcs=false ./...

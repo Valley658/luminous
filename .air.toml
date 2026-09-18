@@ -1,0 +1,48 @@
+#:schema https://json.schemastore.org/any.json
+
+# Air(https://github.com/air-verse/air) 설정 - 로컬 개발용 Go 라이브 리로드.
+#
+# 운영 배포와는 완전히 분리되어 있습니다:
+#   - go-server/bin/pastellive-server.exe(운영이 실제로 실행하는 파일)는 절대 건드리지 않고,
+#     go-server/tmp/pastellive-server-dev.exe 라는 별도 바이너리로만 빌드/실행합니다.
+#   - .env.dev 를 통째로 별도 환경파일로 써서(ENV_FILE=.env.dev) 운영 .env(운영 MySQL 접속정보,
+#     시크릿 키, API 키 등)를 전혀 읽지 않습니다. DB_BACKEND를 안 정해서 기본값인 sqlite로
+#     뜨기 때문에 운영 데이터는 전혀 건드리지 않고, 포트도 8082로 달라서 운영(8081)과 안 겹칩니다.
+#   - 자세한 내용/커스터마이즈는 .env.dev 파일 참고.
+#
+# 설치: go install github.com/air-verse/air@latest
+# 사용: 프로젝트 루트(이 파일이 있는 곳)에서 그냥 `air` 실행. Ctrl+C로 종료.
+#       .go 또는 templates/*.html 파일을 저장할 때마다 자동으로 재빌드 + 재시작됩니다.
+#       (참고: gonja 템플릿 캐시는 재시작 전까지 갱신되지 않는데, .html도 감시 대상이라
+#       템플릿만 고쳐도 Air가 자동으로 재시작해줍니다.)
+
+root = "."
+tmp_dir = "go-server/tmp"
+env_files = [".env.dev"]
+
+[build]
+  cmd = "go build -C go-server -o tmp\\pastellive-server-dev.exe ./cmd/server"
+  bin = "go-server\\tmp\\pastellive-server-dev.exe"
+  entrypoint = ["go-server\\tmp\\pastellive-server-dev.exe"]
+  # go-server와 templates만 감시 (나머지 c-image-service/nsfw-service/phash-service/static
+  # 등은 include_dir을 지정하는 순간 자동으로 감시 대상에서 빠집니다)
+  include_dir = ["go-server", "templates"]
+  include_ext = ["go", "html"]
+  exclude_dir = ["go-server\\tmp", "go-server\\bin", "go-server\\logs", "go-server\\db"]
+  exclude_regex = ["_test\\.go"]
+  delay = 1000
+  stop_on_error = true
+  send_interrupt = true
+  log = "air-build-errors.log"
+
+[log]
+  time = true
+
+[color]
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[misc]
+  clean_on_exit = true

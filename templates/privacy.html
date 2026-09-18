@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', filename='logo/logo.webp') }}" type="image/webp">
+    <title>개인정보처리방침 - 루미너스</title>
+    <link rel="canonical" href="https://pastellive.co.kr{{ request.path }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif; line-height: 1.7; color: #e5e7eb;
+            background: #0f0f0f; margin: 0; padding: 0 20px 60px;
+        }
+        .policy-header {
+            display: flex; align-items: center; justify-content: space-between;
+            max-width: 760px; margin: 0 auto; padding: 24px 0; border-bottom: 1px solid #262626;
+        }
+        .policy-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .policy-brand img { width: 36px; height: 36px; border-radius: 50%; }
+        .policy-brand span {
+            font-size: 19px; font-weight: 900; letter-spacing: -0.5px;
+            color: #38bdf8;
+            background: linear-gradient(90deg, #38bdf8 0%, #ffffff 45%, #a78bfa 55%, #38bdf8 100%);
+            background-size: 250% 100%; -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; text-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+            animation: luminousGlow 3s ease-in-out infinite;
+        }
+        @keyframes luminousGlow {
+            0% { background-position: 250% 0; }
+            50%, 100% { background-position: -250% 0; }
+        }
+        .back-home { color: #9ca3af; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .back-home:hover { color: #38bdf8; }
+
+        .container {
+            max-width: 760px; margin: 32px auto 0; background: #151515; border: 1px solid #262626;
+            border-radius: 16px; padding: 40px 44px;
+        }
+        h1 { color: #fff; font-size: 1.6em; margin: 0 0 8px; }
+        .subtitle { color: #8a8a8a; font-size: 0.85em; margin: 0 0 28px; }
+        h2 { color: #38bdf8; margin-top: 30px; font-size: 1.05em; border-left: 3px solid #38bdf8; padding-left: 10px; }
+        p, ul { color: #bdbdbd; font-size: 0.95em; }
+        li { margin-bottom: 6px; }
+        a { color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <script>try {
+    const _mbg = localStorage.getItem("lastMemberBgColor");
+    if (_mbg && document.body) {
+        document.body.style.setProperty("background-color", _mbg, "important");
+    }
+} catch (e) {}</script>
+
+    <div class="policy-header">
+        <a class="policy-brand" href="/">
+            <img src="{{ url_for('static', filename='logo/logo.webp') }}" alt="루미너스 로고">
+            <span>루미너스</span>
+        </a>
+        <a class="back-home" href="/"><i class="fas fa-arrow-left"></i> 홈으로</a>
+    </div>
+
+    <div class="container">
+        <h1>개인정보처리방침</h1>
+        <p class="subtitle">루미너스(스텔라이브 팬 사이트, 도메인 pastellive.co.kr) · 시행일: 2026년 7월 13일 · 최종 개정일: 2026년 9월 9일</p>
+
+        <p>본 서비스('루미너스')는 「개인정보 보호법」 등 관련 법령을 준수하며, 이용자의 개인정보를 다음과 같이 처리합니다. 본 방침은 서비스 내 모든 페이지(pastellive.co.kr 및 하위 도메인)에 적용됩니다.</p>
+
+        <h2>1. 수집하는 개인정보 항목 및 수집 방법</h2>
+        <p>아이디/비밀번호 회원가입, 디스코드 계정 연동, 서비스 이용 과정에서 아래 정보를 수집합니다. 로그인하지 않아도 대부분의 기능(영상 시청, 검색 등)을 이용할 수 있으며, 이 경우 계정 정보는 수집되지 않습니다.</p>
+        <ul>
+            <li><strong>필수 항목(아이디/비밀번호 가입 시):</strong> 로그인용 아이디, 비밀번호(암호화된 해시 값으로만 저장 - 평문 비밀번호는 저장하지 않음), 닉네임</li>
+            <li><strong>선택 항목:</strong> 프로필 사진(직접 등록 시), 디스코드 계정 연동 시 디스코드 고유 식별자 및 디스코드 사용자명</li>
+            <li><strong>서비스 이용 과정에서 생성되는 정보:</strong> 댓글·게시물·팬아트 등 이용자가 작성한 콘텐츠, 시청 기록, 북마크, 재생목록, 검색어(통계용, 계정과 연결하지 않음)</li>
+            <li><strong>자동 수집 항목:</strong> 접속 로그, IP 주소, 쿠키·세션 정보, 브라우저 및 기기 정보</li>
+            <li><strong>과거 구글 로그인 계정 관련:</strong> 구글 로그인 기능은 2026년 8월 8일부로 완전히 종료되었으며, 로그인에 사용되던 구글 고유 식별자(Google ID)는 이날 데이터베이스에서 완전히 삭제되었습니다. 과거 구글 계정으로 가입했던 이용자의 이메일 주소는 계정 식별을 위해 계속 보관됩니다.</li>
+        </ul>
+
+        <h2>2. 개인정보의 수집 및 이용 목적</h2>
+        <ul>
+            <li>회원 식별, 로그인 상태 유지 및 프로필 표시</li>
+            <li>댓글, 커뮤니티 게시물, 팬 갤러리, 시청 기록, 북마크, 재생목록 등 개인화 기능 제공</li>
+            <li>내 댓글에 대한 답글·좋아요 등 사이트 내 알림(알림함) 제공</li>
+            <li>서비스 부정 이용(스팸, 매크로, 신고 누적 게시물 등) 방지 및 안정적 운영</li>
+            <li>법령상 의무 이행 및 분쟁 대응</li>
+        </ul>
+
+        <h2>3. 개인정보의 보유 및 이용 기간</h2>
+        <p>원칙적으로 회원 탈퇴 시 지체 없이 파기합니다. 다만 아래의 경우 예외로 합니다.</p>
+        <ul>
+            <li>관련 법령(통신비밀보호법 등)에 따라 보존 의무가 있는 항목: 해당 법령이 정한 기간(예: 접속 기록 3개월)</li>
+            <li>부정 이용 방지를 위해 필요한 최소한의 기록: 이용 제한 조치일로부터 최대 1년</li>
+            <li>탈퇴 회원이 작성한 팬아트·게시물·댓글 등 공개 콘텐츠: 탈퇴 처리 시 닉네임·프로필 사진·작성 시 기록된 IP 주소를 즉시 제거(비식별화)한 뒤 콘텐츠 자체는 유지되거나 삭제될 수 있습니다. 좋아요·반응 등 콘텐츠 자체가 아닌 부가 기록은 탈퇴 시 함께 삭제됩니다</li>
+        </ul>
+
+        <h2>4. 개인정보의 파기 절차 및 방법</h2>
+        <p>보유 기간이 경과하거나 처리 목적이 달성된 개인정보는 재생 불가능한 방법으로 지체 없이 파기합니다. 전자적 파일은 복구가 불가능한 방식으로 삭제하며, 데이터베이스에서 완전히 제거합니다.</p>
+
+        <h2>5. 개인정보의 제3자 제공</h2>
+        <p>이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 단, 다음의 경우는 예외로 합니다.</p>
+        <ul>
+            <li>법령에 근거한 수사기관 등의 적법한 요구가 있는 경우</li>
+            <li>이용자가 사전에 명시적으로 동의한 경우</li>
+        </ul>
+
+        <h2>6. 개인정보 처리의 위탁 및 국외 이전</h2>
+        <p>서비스 운영을 위해 아래 업체의 인프라를 이용하며, 이 과정에서 접속 정보 등이 해당 인프라를 경유·저장될 수 있습니다.</p>
+        <ul>
+            <li><strong>Google LLC(미국):</strong> 영상 데이터(YouTube API), 파일 저장(Google Drive)</li>
+            <li><strong>Discord Inc.(미국):</strong> 계정 연동/로그인(OAuth), 알림 봇 운영</li>
+            <li><strong>Cloudflare, Inc.(미국):</strong> 트래픽 중계(CDN·터널), 보안(DDoS 방어) — 접속 IP 등이 경유됩니다</li>
+            <li><strong>Oracle Corporation(일본 리전):</strong> 서버 호스팅(인프라 운영)</li>
+        </ul>
+        <p>각 업체는 자체 개인정보처리방침에 따라 정보를 보호하며, 서비스는 위탁 목적 달성에 필요한 최소한의 정보만 전달합니다.</p>
+
+        <h2>7. 이용자의 권리와 행사 방법</h2>
+        <ul>
+            <li>서비스 내 '프로필 변경'에서 닉네임·프로필 사진을 직접 수정할 수 있습니다.</li>
+            <li>'회원 탈퇴' 기능으로 언제든지 동의를 철회하고 계정과 개인정보 삭제를 요청할 수 있습니다. 탈퇴 시 개인정보는 본 방침 제3조에 따라 파기됩니다.</li>
+            <li>본인 데이터의 열람·정정·삭제·처리정지는 아래 문의 채널로 요청할 수 있으며, 지체 없이 조치합니다.</li>
+        </ul>
+
+        <h2>8. 쿠키 및 유사 기술의 운용</h2>
+        <p>로그인 상태 유지를 위한 세션 쿠키와, 시청 기록·화면 설정 등의 저장을 위한 브라우저 저장소(localStorage 등)를 사용합니다. 브라우저 설정에서 쿠키를 거부하거나 사이트 데이터를 삭제할 수 있으나, 이 경우 로그인 등 일부 기능 이용에 제약이 있을 수 있습니다. 본 서비스는 광고 목적의 추적 쿠키를 사용하지 않습니다.</p>
+
+        <h2>9. 개인정보의 안전성 확보 조치</h2>
+        <ul>
+            <li>전 구간 HTTPS 암호화 통신</li>
+            <li>개인정보가 저장된 서버·데이터베이스에 대한 접근 통제 및 사설망 격리</li>
+            <li>비밀번호는 복호화가 불가능한 해시(암호화) 형태로만 저장하며, 평문으로는 저장·전송하지 않음</li>
+            <li>정기 백업 및 오류 모니터링</li>
+        </ul>
+
+        <h2>10. 아동의 개인정보</h2>
+        <p>만 14세 미만 아동의 회원 가입은 받지 않는 것을 원칙으로 하며, 만 14세 미만임이 확인된 계정은 지체 없이 삭제 조치합니다.</p>
+
+        <h2>11. 개인정보 보호책임자 및 문의</h2>
+        <p>개인정보 관련 문의, 열람·삭제 요청, 불만 처리는 <a href="https://discord.gg/swatakafam" target="_blank" rel="noopener">루미너스 디스코드 채널</a>을 통해 운영자에게 연락해 주시기 바랍니다. 접수일로부터 지체 없이 답변·처리합니다.</p>
+
+        <h2>12. 방침의 변경</h2>
+        <p>본 방침의 내용이 추가·삭제·수정될 경우 시행 7일 전부터 사이트 공지를 통해 알립니다. 이용자에게 불리한 중대한 변경의 경우 최소 30일 전에 공지합니다.</p>
+    </div>
+</body>
+</html>

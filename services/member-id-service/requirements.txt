@@ -1,0 +1,7 @@
+# ---- 멤버 사진 인식 서비스 -------------------------------------------------
+# CLIP(이미지 인코더)을 onnxruntime로만 돌린다 - torch/transformers 같은 무거운
+# 프레임워크는 필요 없음(오늘 XTTS-v2 때 torch/transformers 버전 충돌로 하루
+# 종일 고생한 적 있어서, 이번엔 일부러 가장 가벼운 조합으로 골랐음).
+onnxruntime
+pillow
+numpy

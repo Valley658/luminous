@@ -1,0 +1,14 @@
+{
+  "name": "pastellive",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build tooling for pastellive.co.kr (obfuscated static/js build for the public repo)",
+  "scripts": {
+    "build:js": "node build-obfuscated-js.js",
+    "build:wasm": "asc assembly/imagepreview.ts --target release"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.28.20",
+    "javascript-obfuscator": "^4.1.1"
+  }
+}
