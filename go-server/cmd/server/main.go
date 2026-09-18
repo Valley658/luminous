@@ -109,6 +109,9 @@ func main() {
 	if err := models.InitAttendanceTable(database); err != nil {
 		log.Fatalf("user_attendance 테이블 초기화 실패: %v", err)
 	}
+	if err := models.InitLumiChatHistoryTable(database); err != nil {
+		log.Fatalf("lumi_chat_history 테이블 초기화 실패: %v", err)
+	}
 	if err := models.InitMemberVideoArchiveTable(database); err != nil {
 		log.Fatalf("member_video_archive 테이블 초기화 실패: %v", err)
 	}
@@ -281,6 +284,8 @@ func main() {
 	r.Delete("/api/schedules/{scheduleID}", app.ApiDeleteScheduleHandler)
 
 	r.Post("/api/lumi/ask", app.ApiLumiAskHandler)
+	r.Get("/api/lumi/history", app.ApiLumiHistoryHandler)
+	r.Delete("/api/lumi/history", app.ApiLumiHistoryDeleteHandler)
 
 	r.Get("/share/{contentType}/{contentID}", app.SharePageHandler)
 	r.Get("/sw.js", app.ServiceWorkerHandler)

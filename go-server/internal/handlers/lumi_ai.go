@@ -186,6 +186,23 @@ var (
 	lumiPoliteDeurilge  = regexp.MustCompile(`도와드릴게`)
 	lumiPoliteDeurilSu  = regexp.MustCompile(`도와드릴 수`)
 	lumiPoliteAlryeodeu = regexp.MustCompile(`알려드릴게`)
+
+	// [2026-09-18: "-세요"(공손한 명령형, 해요체의 일종)가 안전망에서 빠져
+	// 있었다 - "다른 질문 있으시면 물어보세요!"처럼 문장 전체가 반말이다가
+	// 마지막에만 "-세요"로 새는 경우가 실제로 관찰됨. 자주 나오는 구체적인
+	// 동사 형태부터 정확한 반말로 바꾸고, 그 외 나머지 "-세요" 전체는
+	// 완벽하진 않아도 존댓말 어미만은 확실히 제거하는 범용 규칙으로 받는다
+	// (위 -습니다 계열과 같은 타협 - 100% 자연스럽진 않아도 존댓말이 새는 것보다 낫다).
+	lumiPoliteJuseyo       = regexp.MustCompile(`주세요([.!?~,\n]|$)`)
+	lumiPoliteHaseyo       = regexp.MustCompile(`하세요([.!?~,\n]|$)`)
+	lumiPoliteMureoboseyo  = regexp.MustCompile(`물어보세요([.!?~,\n]|$)`)
+	lumiPoliteBoseyo       = regexp.MustCompile(`보세요([.!?~,\n]|$)`)
+	lumiPoliteOseyo        = regexp.MustCompile(`오세요([.!?~,\n]|$)`)
+	lumiPoliteGaseyo       = regexp.MustCompile(`가세요([.!?~,\n]|$)`)
+	// "받으세요"/"먹으세요"처럼 자음 어간 뒤에 연결모음 "으"가 붙는 형태는
+	// "세요"만 떼면 "받으"처럼 어색하게 남으니, "으세요"째로 같이 떼어낸다.
+	lumiPoliteEuseyoTail  = regexp.MustCompile(`으세요([.!?~,\n]|$)`)
+	lumiPoliteSeyoTailAny = regexp.MustCompile(`세요([.!?~,\n]|$)`)
 )
 
 func sanitizeLumiBanmal(reply string) string {
@@ -202,6 +219,17 @@ func sanitizeLumiBanmal(reply string) string {
 	s = lumiPoliteDeurilge.ReplaceAllString(s, "도와줄게")
 	s = lumiPoliteDeurilSu.ReplaceAllString(s, "도와줄 수")
 	s = lumiPoliteAlryeodeu.ReplaceAllString(s, "알려줄게")
+	// 구체적인 동사부터 정확한 반말로 바꾸고(순서 중요: "물어보세요"가
+	// "보세요"의 부분 문자열이라 먼저 처리해야 함), 마지막에 나머지 "-세요"는
+	// 범용 규칙으로 존댓말 어미만이라도 제거한다.
+	s = lumiPoliteMureoboseyo.ReplaceAllString(s, "물어봐$1")
+	s = lumiPoliteJuseyo.ReplaceAllString(s, "줘$1")
+	s = lumiPoliteHaseyo.ReplaceAllString(s, "해$1")
+	s = lumiPoliteBoseyo.ReplaceAllString(s, "봐$1")
+	s = lumiPoliteOseyo.ReplaceAllString(s, "와$1")
+	s = lumiPoliteGaseyo.ReplaceAllString(s, "가$1")
+	s = lumiPoliteEuseyoTail.ReplaceAllString(s, "어$1")
+	s = lumiPoliteSeyoTailAny.ReplaceAllString(s, "어$1")
 	return s
 }
 
@@ -641,12 +669,68 @@ func lumiCreatorDeflectReply(lines []string) map[string]any {
 	return map[string]any{"success": true, "reply": lines[rand.Intn(len(lines))]}
 }
 
+// sendLumiReply는 루미의 답변을 방문자에게 내려주는 동시에, 로그인한
+// 사용자라면 나중에 다시 불러볼 수 있게 질문/답변 한 쌍을 DB에 저장한다.
+// 캐시 히트(같은 질문 재사용)나 갤러리/사이트제작/제작자 같은 정형 답변도
+// 방문자 눈에는 똑같이 "루미와 나눈 대화"이므로 전부 이 함수를 거쳐서
+// 저장 대상에 포함시킨다. 비로그인(userID == 0)은 SaveLumiChatMessage
+// 내부에서 이미 걸러지지만, DB 쿼리 자체를 아끼기 위해 여기서도 먼저 체크한다.
+func (a *App) sendLumiReply(w http.ResponseWriter, userID int64, prompt string, payload map[string]any) {
+	if userID != 0 {
+		if reply, ok := payload["reply"].(string); ok && reply != "" {
+			if err := models.SaveLumiChatMessage(a.DB, userID, prompt, reply); err != nil {
+				log.Printf("루미 대화 기록 저장 실패(user_id=%d): %v", userID, err)
+			}
+		}
+	}
+	writeJSON(w, payload)
+}
+
+// ApiLumiHistoryHandler는 로그인한 사용자가 예전에 루미와 나눈 대화를
+// 불러온다(채팅창을 새로 열었을 때 프론트엔드가 자동으로 호출). 비로그인
+// 방문자는 애초에 저장된 기록이 없으니 빈 배열만 내려준다.
+func (a *App) ApiLumiHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	userID := sessionUserID(r)
+	if userID == 0 {
+		writeJSON(w, map[string]any{"success": true, "messages": []models.LumiChatMessage{}})
+		return
+	}
+	messages, err := models.ListLumiChatHistory(a.DB, userID, 50)
+	if err != nil {
+		log.Printf("루미 대화 기록 조회 실패(user_id=%d): %v", userID, err)
+		httputil.JSONError(w, http.StatusInternalServerError, "대화 기록을 불러오지 못했어.")
+		return
+	}
+	writeJSON(w, map[string]any{"success": true, "messages": messages})
+}
+
+// ApiLumiHistoryDeleteHandler는 사용자가 저장된 루미 대화 기록을 직접
+// 지우고 싶을 때 쓴다(설정 등에서 "대화 기록 삭제" 버튼용).
+func (a *App) ApiLumiHistoryDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	userID := sessionUserID(r)
+	if userID == 0 {
+		httputil.JSONError(w, http.StatusUnauthorized, "로그인이 필요해.")
+		return
+	}
+	if err := models.DeleteLumiChatHistory(a.DB, userID); err != nil {
+		log.Printf("루미 대화 기록 삭제 실패(user_id=%d): %v", userID, err)
+		httputil.JSONError(w, http.StatusInternalServerError, "대화 기록을 지우지 못했어.")
+		return
+	}
+	writeJSON(w, map[string]any{"success": true})
+}
+
 // ApiLumiAskHandler는 방문자가 루미에게 보낸 질문을 로컬 LLM에 넘기고 답을 받아온다.
 func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 	if a.LocalAI == nil {
 		httputil.JSONError(w, http.StatusServiceUnavailable, "루미의 AI 기능이 아직 설정되지 않았어.")
 		return
 	}
+
+	// [2026-09-18: 대화 기록 저장을 위해 이 요청 전체에서 한 번만 조회해서
+	// 재사용한다 - 아래 비로그인 1회 제한 체크와, 답변이 나온 뒤 저장할 때
+	// 둘 다 같은 값을 쓴다.]
+	userID := sessionUserID(r)
 
 	var prompt string
 	var imageBytes []byte
@@ -708,7 +792,7 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 	// 오면 새로 1번이 주어진다 - IP 기준보다 오탐(같은 공용 와이파이/모바일
 	// 네트워크를 쓰는 다른 방문자까지 막아버리는 것)이 훨씬 적다. 캐시 히트나
 	// 갤러리/사이트정보 같은 정형 답변도 전부 "질문 1회"로 센다.
-	if sessionUserID(r) == 0 {
+	if userID == 0 {
 		sess := middleware.GetSession(r)
 		if sess != nil && sess.GetInt64("lumi_free_used") >= 1 {
 			httputil.JSONError(w, http.StatusForbidden, "더 많은 채팅을 원하신다면 로그인해주세요!")
@@ -732,14 +816,14 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 	// 사진 첨부 요청과는 무관하니 imageBytes 유무와 상관없이 먼저 확인하고,
 	// Ollama를 아예 안 쓰니 쿨다운/캐시 로직보다 앞에서 처리해도 무방하다.
 	if len(imageBytes) == 0 && isLumiGalleryShowRequest(prompt) {
-		writeJSON(w, lumiGalleryShowReply(a.DB, dialogue.GalleryShowLines))
+		a.sendLumiReply(w, userID, prompt, lumiGalleryShowReply(a.DB, dialogue.GalleryShowLines))
 		return
 	}
 
 	// 사이트 제작 시기 질문도 같은 이유로 LLM을 거치지 않고 바로 답한다 -
 	// 아래 isLumiSiteOriginQuestion 주석 참고.
 	if len(imageBytes) == 0 && isLumiSiteOriginQuestion(prompt) {
-		writeJSON(w, lumiSiteOriginDeflectReply(dialogue.SiteOriginDeflectLines))
+		a.sendLumiReply(w, userID, prompt, lumiSiteOriginDeflectReply(dialogue.SiteOriginDeflectLines))
 		return
 	}
 
@@ -747,7 +831,7 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 	// 아래 isLumiCreatorQuestion 주석 참고. 신상 정보(학교/학년 등)는 절대
 	// 넣지 않고 기존 [사이트 운영진에 대해] 톤 그대로만 답함.
 	if len(imageBytes) == 0 && isLumiCreatorQuestion(prompt) {
-		writeJSON(w, lumiCreatorDeflectReply(dialogue.CreatorDeflectLines))
+		a.sendLumiReply(w, userID, prompt, lumiCreatorDeflectReply(dialogue.CreatorDeflectLines))
 		return
 	}
 
@@ -801,7 +885,7 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		if imagePhash != "" {
 			imageCacheKey = imagePhash + "|" + strings.ToLower(strings.TrimSpace(prompt))
 			if cached, ok := lumiImageReplyCacheGet(imageCacheKey); ok {
-				writeJSON(w, map[string]any{"success": true, "reply": cached})
+				a.sendLumiReply(w, userID, prompt, map[string]any{"success": true, "reply": cached})
 				return
 			}
 		}
@@ -815,7 +899,7 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		if normalized := normalizeLumiQuestion(prompt); normalized != "" {
 			textCacheKey = normalized
 			if cached, ok := lumiTextReplyCacheGet(textCacheKey); ok {
-				writeJSON(w, map[string]any{"success": true, "reply": cached})
+				a.sendLumiReply(w, userID, prompt, map[string]any{"success": true, "reply": cached})
 				return
 			}
 		}
@@ -875,5 +959,5 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		lumiTextReplyCacheSet(textCacheKey, reply)
 	}
 
-	writeJSON(w, map[string]any{"success": true, "reply": reply})
+	a.sendLumiReply(w, userID, prompt, map[string]any{"success": true, "reply": reply})
 }

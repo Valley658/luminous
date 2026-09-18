@@ -4535,29 +4535,36 @@ function renderLumiQuickReplies(parentMsg, justAsked) {
 
 let lumiAskInFlight = false;
 async function lumiAskAI(question, imageFile, imageURL) {
-    const input = document.getElementById("lumiAskInput");
-    const submitBtn = document.getElementById("lumiAskSubmit");
     if (lumiAskInFlight) return;
     lumiAskInFlight = true;
+    const input = document.getElementById("lumiAskInput");
+    const submitBtn = document.getElementById("lumiAskSubmit");
     if (input) input.disabled = true;
     if (submitBtn) submitBtn.disabled = true;
 
-    // 파일 첨부는 objectURL을 만들어야 미리보기가 되지만, 링크 첨부는 그
-    // 외부 URL 자체가 이미 미리보기로 쓸 수 있는 주소라 그대로 사용한다.
-    const imagePreviewUrl = imageFile ? URL.createObjectURL(imageFile) : (imageURL || null);
-    lumiAppendMessage("user", question || "(사진만 첨부함)", imagePreviewUrl);
-    const thinking = lumiAppendMessage("ai", lumiRandomThinkingLine());
-    if (thinking) thinking.msg.classList.add("lumi-msg-thinking");
-
-    // 로컬 AI가 방금 켜졌으면 처음 한 번은 원래 오래 걸릴 수 있어서(모델을
-    // 메모리에 불러오는 중), 오래 걸릴수록 "멈춘 건가?" 싶지 않게 문구를 바꿔준다.
-    const thinkingTimers = thinking ? [
-        setTimeout(() => { thinking.bubble.textContent = lumiRandomFrom(LUMI_THINKING_ESCALATION[0]); }, 8000),
-        setTimeout(() => { thinking.bubble.textContent = lumiRandomFrom(LUMI_THINKING_ESCALATION[1]); }, 20000),
-        setTimeout(() => { thinking.bubble.textContent = lumiRandomFrom(LUMI_THINKING_ESCALATION[2]); }, 45000),
-    ] : [];
-
+    // [2026-09-18 수정] 아래 준비 작업(objectURL 생성, 말풍선 추가 등)이 원래
+    // try 블록 밖에 있어서, 여기서 예외가 하나라도 나면 finally가 아예 실행되지
+    // 않고 lumiAskInFlight가 true로 영영 고정돼 다음 질문을 영원히 못 쓰게
+    // 되는 버그가 있었다. 이제 이 준비 작업까지 전부 try 안으로 옮겨서, 무슨
+    // 일이 있어도 finally에서 반드시 입력창/버튼이 풀리도록 보장한다.
+    let thinking = null;
+    let thinkingTimers = [];
     try {
+        // 파일 첨부는 objectURL을 만들어야 미리보기가 되지만, 링크 첨부는 그
+        // 외부 URL 자체가 이미 미리보기로 쓸 수 있는 주소라 그대로 사용한다.
+        const imagePreviewUrl = imageFile ? URL.createObjectURL(imageFile) : (imageURL || null);
+        lumiAppendMessage("user", question || "(사진만 첨부함)", imagePreviewUrl);
+        thinking = lumiAppendMessage("ai", lumiRandomThinkingLine());
+        if (thinking) thinking.msg.classList.add("lumi-msg-thinking");
+
+        // 로컬 AI가 방금 켜졌으면 처음 한 번은 원래 오래 걸릴 수 있어서(모델을
+        // 메모리에 불러오는 중), 오래 걸릴수록 "멈춘 건가?" 싶지 않게 문구를 바꿔준다.
+        thinkingTimers = thinking ? [
+            setTimeout(() => { thinking.bubble.textContent = lumiRandomFrom(LUMI_THINKING_ESCALATION[0]); }, 8000),
+            setTimeout(() => { thinking.bubble.textContent = lumiRandomFrom(LUMI_THINKING_ESCALATION[1]); }, 20000),
+            setTimeout(() => { thinking.bubble.textContent = lumiRandomFrom(LUMI_THINKING_ESCALATION[2]); }, 45000),
+        ] : [];
+
         let fetchOptions;
         if (imageFile) {
             const form = new FormData();
@@ -4629,6 +4636,27 @@ async function lumiAskAI(question, imageFile, imageURL) {
     }
 }
 window.lumiAskAI = lumiAskAI;
+
+// [2026-09-18] 로그인한 사용자는 예전에 루미와 나눴던 대화를 페이지를 새로
+// 열 때마다 그대로 불러와서 보여준다(비로그인 방문자는 서버가 빈 배열을
+// 내려주므로 자연스럽게 아무 것도 안 뜬다). 채팅창이 별도로 "열기" 동작이
+// 있는 게 아니라 항상 렌더링돼 있는 사이드바라, 페이지 로드 시 한 번만
+// 호출하면 된다.
+async function lumiLoadHistory() {
+    try {
+        const res = await fetch("/api/lumi/history");
+        if (!res.ok) return;
+        const data = await res.json();
+        const messages = (data && data.messages) || [];
+        messages.forEach((m) => {
+            if (m.question) lumiAppendMessage("user", m.question);
+            if (m.reply) lumiAppendMessage("ai", m.reply);
+        });
+    } catch (e) {
+        // 기록을 못 불러와도 채팅 자체는 정상 동작해야 하니 조용히 무시한다.
+    }
+}
+lumiLoadHistory();
 
 // 루미 칸 접기 버튼(#lumiSidebarToggle)은 CSS에 right: 380px로 칸의 "기본"
 // 너비만큼만 고정되어 있었다. 그런데 칸은 #lumiResizeHandle로 너비를 늘리고
