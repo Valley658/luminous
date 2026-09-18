@@ -8,7 +8,12 @@ rem 백그라운드로 등록한다(watchdog.exe가 감시 - go-server\bin\watch
 rem 참고). TTS 설치 때와 달리 onnxruntime/pillow/numpy만 쓰는 가벼운
 rem 조합이라 버전 충돌 걱정이 훨씬 적음.
 
-set "ROOT=%~dp0"
+rem [2026-09-18: scripts\ 폴더로 옮겨지면서 %~dp0이 더 이상 프로젝트 루트가
+rem 아니게 됐다 - 한 단계 위(..)로 올라가야 services\, go-server\ 가 실제로
+rem 있는 루트가 나옴. for/%%~f로 상대경로(..)를 완전한 절대경로로 정리해서
+rem ROOT에 담아둔다(뒤에서 %ROOT%services\... 처럼 바로 이어붙이므로 끝에
+rem 백슬래시를 그대로 유지).]
+for %%I in ("%~dp0..") do set "ROOT=%%~fI\"
 set "SVCDIR=%ROOT%services\member-id-service"
 set "VENVDIR=%ProgramData%\LuminousMemberID\venv"
 set "VENV_PY=%VENVDIR%\Scripts\python.exe"

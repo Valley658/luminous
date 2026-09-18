@@ -7,7 +7,11 @@ exit /b
 
 :main
 setlocal enabledelayedexpansion
-for %%I in ("%~dp0") do set "APPDIR=%%~fI"
+rem [2026-09-18: scripts\ 폴더로 옮겨지면서 %~dp0이 더 이상 프로젝트 루트가
+rem 아니게 됐다 - 한 단계 위(..)로 올라가야 실제 루트. APPDIR은 아래에서
+rem "이 폴더 소속 프로세스만 종료"하는 안전장치라 잘못되면 재시작이 조용히
+rem 실패할 수 있어 특히 중요함.]
+for %%I in ("%~dp0..") do set "APPDIR=%%~fI"
 if "%APPDIR:~-1%"=="\" set "APPDIR=%APPDIR:~0,-1%"
 
 echo ============================================

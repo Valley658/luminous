@@ -1,6 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
-for %%I in ("%~dp0") do set "APPDIR=%%~fI"
+rem [2026-09-18: 이 파일이 scripts\ 폴더로 옮겨지면서 %~dp0(이 스크립트 자신의
+rem 위치)가 더 이상 프로젝트 루트가 아니게 됐다 - 한 단계 위(..)로 올라가야
+rem 실제 루트가 나온다. 이 값(APPDIR)은 아래에서 "이 폴더 소속 프로세스만
+rem 종료"하는 안전장치로 쓰이므로, 잘못되면 정작 꺼야 할 서버 프로세스를 못
+rem 찾아서 그냥 지나쳐버리는 조용한 실패가 생길 수 있어 특히 중요함.]
+for %%I in ("%~dp0..") do set "APPDIR=%%~fI"
 if "%APPDIR:~-1%"=="\" set "APPDIR=%APPDIR:~0,-1%"
 
 echo Stopping ALL pastellive-related services

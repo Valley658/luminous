@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
-cd /d "%~dp0"
+rem [2026-09-18: scripts\ 폴더로 옮겨지면서 %~dp0이 더 이상 프로젝트 루트가
+rem 아니게 됐다 - air는 현재 디렉터리에서 .air.toml을 찾으므로, 루트로
+rem 옮겨가지 않으면 설정 파일을 못 찾거나(또는 엉뚱한 폴더 기준으로 동작).]
+cd /d "%~dp0.."
 
 set "GOBINPATH=%USERPROFILE%\go\bin"
 echo %PATH% | find /i "%GOBINPATH%" >nul

@@ -7,7 +7,10 @@ exit /b
 
 :main
 setlocal enabledelayedexpansion
-for %%I in ("%~dp0") do set "APPDIR=%%~fI"
+rem [2026-09-18: scripts\ 폴더로 옮겨지면서 %~dp0이 더 이상 프로젝트 루트가
+rem 아니게 됐다 - 한 단계 위(..)로 올라가야 go-server\ 가 실제로 있는 루트가
+rem 나옴. 안 고치면 GODIR이 존재하지 않는 경로가 돼서 빌드 자체가 바로 실패함.]
+for %%I in ("%~dp0..") do set "APPDIR=%%~fI"
 if "%APPDIR:~-1%"=="\" set "APPDIR=%APPDIR:~0,-1%"
 set "GODIR=%APPDIR%\go-server"
 set "GOBIN=%GODIR%\bin"
