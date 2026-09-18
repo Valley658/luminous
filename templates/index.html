@@ -2222,6 +2222,21 @@ function smoothScrollTrackBy(el, distance, duration) {
             border-bottom-left-radius: 4px;
         }
         .lumi-msg-ai.lumi-msg-thinking .lumi-msg-bubble { color: var(--text-muted); font-style: italic; }
+        /* 루미 답변에 ```코드``` 블록이 섞여 나올 때(예: 파이썬 코드 요청) 백틱이
+           그대로 텍스트로 보이던 문제 - 코드 블록/인라인 코드를 실제 마크다운처럼
+           고정폭 글꼴 박스로 렌더링한다. */
+        .lumi-msg-bubble .lumi-code-block {
+            margin: 6px 0; padding: 10px 12px; border-radius: 8px; overflow-x: auto;
+            background: var(--bg-page, #0d0d0d); border: 1px solid var(--border-strong);
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 12.5px; line-height: 1.5; white-space: pre; max-width: 100%;
+        }
+        .lumi-msg-bubble .lumi-code-block code { background: none; padding: 0; border: none; }
+        .lumi-msg-bubble .lumi-inline-code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 12px; background: var(--bg-page, #0d0d0d); border: 1px solid var(--border-strong);
+            border-radius: 4px; padding: 1px 5px; white-space: pre-wrap; word-break: break-word;
+        }
 
         #lumiAskForm {
             flex: 0 0 auto; display: flex; gap: 6px; padding: 12px 16px;
@@ -4399,8 +4414,33 @@ function lumiEscapeHtml(s) {
 }
 function renderLumiMarkdown(text) {
     let out = lumiEscapeHtml(text);
+
+    // ```코드``` 블록/`인라인 코드`는 안에 **kwargs, - 옵션처럼 마크다운 문법과
+    // 겹치는 문자가 흔히 들어있어서, 볼드/불릿 치환보다 먼저 코드 부분을 통째로
+    // 떼어내 플레이스홀더로 바꿔두고, 나머지 텍스트에만 볼드/불릿을 적용한 다음
+    // 마지막에 다시 끼워넣는다. lumiEscapeHtml이 맨 처음에 전체를 이스케이프해둔
+    // 상태라 코드 내용도 이미 안전하게 이스케이프되어 있음 - 그대로 넣으면 됨.
+    const codeBlocks = [];
+    out = out.replace(/```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g, function(_, lang, code) {
+        const idx = codeBlocks.length;
+        const langAttr = lang ? ' data-lang="' + lumiEscapeHtml(lang) + '"' : "";
+        codeBlocks.push('<pre class="lumi-code-block"' + langAttr + '><code>' + code.replace(/\n$/, "") + '</code></pre>');
+        return " CB" + idx + " ";
+    });
+
+    const inlineCodes = [];
+    out = out.replace(/`([^`\n]+?)`/g, function(_, code) {
+        const idx = inlineCodes.length;
+        inlineCodes.push('<code class="lumi-inline-code">' + code + '</code>');
+        return " IC" + idx + " ";
+    });
+
     out = out.replace(/\*\*([^\n*]+?)\*\*/g, "<strong>$1</strong>");
     out = out.replace(/^[ \t]*[-*][ \t]+/gm, "• ");
+
+    out = out.replace(/ CB(\d+) /g, function(_, idx) { return codeBlocks[+idx]; });
+    out = out.replace(/ IC(\d+) /g, function(_, idx) { return inlineCodes[+idx]; });
+
     return out;
 }
 
