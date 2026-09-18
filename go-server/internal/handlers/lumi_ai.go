@@ -22,6 +22,7 @@ import (
 	"pastellive/internal/lumidialogue"
 	"pastellive/internal/lumiprofiles"
 	"pastellive/internal/memberwiki"
+	"pastellive/internal/middleware"
 	"pastellive/internal/models"
 )
 
@@ -91,9 +92,13 @@ func lumiImageReplyCacheSet(key, reply string) {
 // 질문(예: 방금 스케줄 공지가 뜬 직후 "오늘 스케줄 뭐야?"처럼 여러 명이 몰려서
 // 물어보는 경우)에 매번 새로 생각하지 않고 바로 답해줄 수 있게. 라이브
 // 상태/스케줄처럼 시간이 지나면 바뀌는 정보가 답변에 섞여 있을 수 있어서
-// TTL을 이미지 캐시보다 훨씬 짧게(몇 분) 잡는다.
-const lumiTextReplyCacheTTL = 2 * time.Minute
-const lumiTextReplyCacheMax = 300
+// 이미지 캐시(30분)보다는 짧게 잡되, 예전엔 2분이라 "비슷한 질문에 바로바로
+// 답해줬으면 좋겠다"는 요청에 비해 창이 너무 좁았다(다른 시간대에 온 방문자는
+// 거의 캐시 혜택을 못 봄) - 30분으로 늘렸다. 라이브 상태가 그 안에 바뀔 수는
+// 있지만, 어차피 라이브 상태 질문 자체는 실시간성이 중요한 소수 케이스라
+// 감수할 만한 트레이드오프로 판단.
+const lumiTextReplyCacheTTL = 30 * time.Minute
+const lumiTextReplyCacheMax = 500
 
 var (
 	lumiTextReplyCacheMu sync.Mutex
@@ -168,6 +173,19 @@ var (
 	lumiFormalIpnidaTail     = regexp.MustCompile(`입니다([.!?~,\n]|$)`)
 	lumiFormalSeupnidaTail   = regexp.MustCompile(`습니다([.!?~,\n]|$)`)
 	lumiFormalJyoTail        = regexp.MustCompile(`죠([.!?~,\n]|$)`)
+
+	// [2026-09-18: 예전 안전망은 -습니다/-입니다/-합니다/-됩니다/-죠 같은 "격식체"
+	// 어미만 잡았는데, 실제로는 "-예요"/"-아요"/"-어요"/"-게요"/"-네요" 같은
+	// "해요체"(격식체보단 덜 딱딱하지만 여전히 존댓말)로 새는 경우도 있었다
+	// (예: "도와드릴 수 있을 것 같아요"). 해요체 어미도 마저 반말로 바꾼다.]
+	lumiPoliteYeyoTail = regexp.MustCompile(`예요([.!?~,\n]|$)`)
+	lumiPoliteYoTail   = regexp.MustCompile(`(아|어|워|게|네|돼)요([.!?~,\n]|$)`)
+	// "드리다"(공손한 "주다") 계열은 격식/해요체가 아니어도 그 자체로 너무
+	// 공손한 어휘라 반말 문장 안에서도 붕 떠 보인다 - "드릴게"/"드릴 수" 같은
+	// 자주 나오는 형태만 자연스러운 반말 어휘로 바꿔치기한다.
+	lumiPoliteDeurilge  = regexp.MustCompile(`도와드릴게`)
+	lumiPoliteDeurilSu  = regexp.MustCompile(`도와드릴 수`)
+	lumiPoliteAlryeodeu = regexp.MustCompile(`알려드릴게`)
 )
 
 func sanitizeLumiBanmal(reply string) string {
@@ -179,6 +197,11 @@ func sanitizeLumiBanmal(reply string) string {
 	s = lumiFormalIpnidaTail.ReplaceAllString(s, "이야$1")
 	s = lumiFormalSeupnidaTail.ReplaceAllString(s, "어$1")
 	s = lumiFormalJyoTail.ReplaceAllString(s, "지$1")
+	s = lumiPoliteYeyoTail.ReplaceAllString(s, "야$1")
+	s = lumiPoliteYoTail.ReplaceAllString(s, "$1$2")
+	s = lumiPoliteDeurilge.ReplaceAllString(s, "도와줄게")
+	s = lumiPoliteDeurilSu.ReplaceAllString(s, "도와줄 수")
+	s = lumiPoliteAlryeodeu.ReplaceAllString(s, "알려줄게")
 	return s
 }
 
@@ -403,6 +426,78 @@ func (a *App) autoFetchMissingMemberProfile(ctx context.Context, prompt string) 
 	}
 }
 
+// lumiPairingKeywords: 멤버 개인 프로필이 아니라 "두 멤버 사이의 관계/이벤트"를
+// 다루는 나무위키 하위 문서(예: "김블루 - 강지 우결")를 찾아야 하는 질문의 신호.
+// 필요해지면 여기에 키워드만 추가하면 됨(커플, 합방 등).
+var lumiPairingKeywords = []string{"우결"}
+
+// lumiPairingAttempted는 (멤버쌍+키워드) 단위로 최근 나무위키 조회 실패를
+// 기억해서, 같은 조합이 계속 물어봐져도 매번 다시 요청하지 않게 막는다.
+// 멤버 개인 프로필과 달리 이 결과는 파일에 영구 저장하지 않는다 - "우결"류
+// 페어링 이벤트는 그 자체가 상황적/일화성 정보라 멤버 프로필처럼 계속
+// 유효한 고정 사실로 보기 애매하고, 답변 자체는 이미 위의 텍스트 질문
+// 캐시(lumiTextReplyCache)에 30분간 캐시되므로 매번 다시 나무위키를 긁을
+// 필요도 없다.
+var (
+	lumiPairingAttemptedMu sync.Mutex
+	lumiPairingAttempted   = map[string]time.Time{}
+)
+
+// autoFetchMemberPairingFact는 질문에 서로 다른 멤버 이름 2개와 페어링/이벤트
+// 키워드(우결 등)가 함께 등장하면, 그 조합의 나무위키 하위 문서를 조회해서
+// 답변에 바로 참고할 수 있는 사실 텍스트를 돌려준다. 못 찾으면 빈 문자열.
+func (a *App) autoFetchMemberPairingFact(ctx context.Context, prompt string) string {
+	var keyword string
+	for _, k := range lumiPairingKeywords {
+		if strings.Contains(prompt, k) {
+			keyword = k
+			break
+		}
+	}
+	if keyword == "" {
+		return ""
+	}
+
+	var mentioned []string
+	for _, m := range data.SIDEBAR_MEMBERS {
+		if m.Name == "스텔라이브" {
+			continue
+		}
+		if strings.Contains(prompt, m.Name) {
+			mentioned = append(mentioned, m.Name)
+			if len(mentioned) >= 2 {
+				break
+			}
+		}
+	}
+	if len(mentioned) < 2 {
+		return ""
+	}
+	nameA, nameB := mentioned[0], mentioned[1]
+
+	cacheKey := nameA + "|" + nameB + "|" + keyword
+	lumiPairingAttemptedMu.Lock()
+	lastTry, tried := lumiPairingAttempted[cacheKey]
+	lumiPairingAttemptedMu.Unlock()
+	if tried && time.Since(lastTry) < lumiWikiRetryCooldown {
+		return ""
+	}
+
+	result, ok := memberwiki.FetchPairingFromNamuwiki(ctx, nameA, nameB, keyword)
+	lumiPairingAttemptedMu.Lock()
+	lumiPairingAttempted[cacheKey] = time.Now()
+	lumiPairingAttemptedMu.Unlock()
+	if !ok {
+		return ""
+	}
+
+	fact := "[" + nameA + " - " + nameB + " " + keyword + " 관련 정보]\n" + result.Bio
+	if result.Extra != "" {
+		fact += "\n" + result.Extra
+	}
+	return fact
+}
+
 // buildGroundedPrompt는 질문 앞에 웹 검색 결과를 붙여서, 모델 자체 지식만으론
 // 부족하거나 틀리기 쉬운 사실(연도, 최신 소식 등)을 검색 결과로 보완해준다.
 // 검색이 실패하거나 결과가 없으면 그냥 원래 질문만 그대로 보낸다.
@@ -607,6 +702,23 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		prompt = string(runes[:lumiAIMaxPromptRunes])
 	}
 
+	// 비로그인 방문자는 루미에게 딱 1번만 질문할 수 있고, 그 다음부터는 로그인을
+	// 유도한다. 계정별이 아니라 세션 쿠키(pl_session) 기준이라 로그아웃 상태로
+	// 다시 방문해도(같은 브라우저라면) 계속 이어지고, 시크릿 모드/다른 브라우저로
+	// 오면 새로 1번이 주어진다 - IP 기준보다 오탐(같은 공용 와이파이/모바일
+	// 네트워크를 쓰는 다른 방문자까지 막아버리는 것)이 훨씬 적다. 캐시 히트나
+	// 갤러리/사이트정보 같은 정형 답변도 전부 "질문 1회"로 센다.
+	if sessionUserID(r) == 0 {
+		sess := middleware.GetSession(r)
+		if sess != nil && sess.GetInt64("lumi_free_used") >= 1 {
+			httputil.JSONError(w, http.StatusForbidden, "더 많은 채팅을 원하신다면 로그인해주세요!")
+			return
+		}
+		if sess != nil {
+			sess.Set("lumi_free_used", int64(1))
+		}
+	}
+
 	// 루미의 성격/말투/시스템 프롬프트 규칙/고정 대사는 go-server/lumi_data/
 	// lumi_dialogue.json 파일에서 매 요청마다 새로 읽어온다 - 캐싱 없이 매번
 	// 다시 읽으므로, 리도님이 파일만 고쳐도 서버 재시작 없이 바로 반영됨
@@ -715,13 +827,21 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 	// 자동으로 가져와 저장해둔다 - 성공하면 바로 아래 buildMemberProfileFact()가
 	// 새로 저장된 값을 그대로 읽어서 이번 답변에도 반영됨(사진 첨부 요청은
 	// buildImageIdentifyFact가 따로 처리하니 텍스트 질문일 때만).
+	var pairingFact string
 	if len(imageBytes) == 0 {
 		a.autoFetchMissingMemberProfile(ctx, prompt)
+		// "강지와 김블루 우결 날짜는?"처럼 멤버 개인 프로필이 아니라 두 멤버
+		// 사이의 이벤트/관계를 묻는 질문은 위 프로필 자동조회로는 못 잡으니
+		// 별도로 처리한다.
+		pairingFact = a.autoFetchMemberPairingFact(ctx, prompt)
 	}
 
 	systemPrompt := lumidialogue.BuildSystemPrompt(dialogue, data.LumiRosterFacts) + "\n\n" + buildCurrentDateTimeFact() + "\n\n" + a.buildLiveStatusFact() + "\n\n" + a.buildScheduleFact()
 	if profileFact := a.buildMemberProfileFact(); profileFact != "" {
 		systemPrompt += "\n\n" + profileFact
+	}
+	if pairingFact != "" {
+		systemPrompt += "\n\n" + pairingFact
 	}
 	if imageFact != "" {
 		systemPrompt += "\n\n" + imageFact

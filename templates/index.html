@@ -959,45 +959,6 @@
         </div>
     </div>
 
-    <style>
-        .roulette-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 20100; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .roulette-modal-overlay.open { display: flex; animation: plOverlayFadeIn .18s ease both; }
-        .roulette-modal-box { background:var(--bg-surface-3); border-radius: 20px; padding: 28px; max-width: 480px; width: 100%; text-align: center; position: relative; animation: plScaleUp .22s cubic-bezier(.34,1.56,.64,1) both; box-sizing: border-box; }
-        .roulette-modal-box h3 { font-size: 20px; margin: 0 0 18px; color:var(--text-primary); }
-        .roulette-wheel-wrap { position: relative; width: 280px; height: 280px; margin: 0 auto 22px; }
-        .roulette-pointer { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); font-size: 32px; color:var(--accent); z-index: 5; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); line-height: 1; }
-        .roulette-wheel { position: relative; width: 100%; height: 100%; border-radius: 50%; border: 4px solid var(--accent); overflow: hidden; background: var(--bg-elevated); transition: transform 3.8s cubic-bezier(.12,.75,.18,1); }
-        .roulette-item { position: absolute; top: 50%; left: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px; }
-        .roulette-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 2px solid var(--bg-surface-3); box-shadow: 0 2px 6px rgba(0,0,0,.45); display: block; }
-        .roulette-spin-btn { background:var(--accent); color:var(--accent-contrast); border:none; border-radius: 24px; padding: 13px 32px; font-weight: 800; font-size: 16px; cursor: pointer; }
-        .roulette-spin-btn:disabled { opacity: .5; cursor: default; }
-        .roulette-modal-close { position:absolute; top: 14px; right: 16px; background: none; border:none; color:var(--text-muted); font-size: 20px; cursor: pointer; }
-        .roulette-result { margin-bottom: 18px; }
-        .roulette-result img { width: 160px; aspect-ratio:16/9; object-fit:cover; border-radius: 10px; margin-bottom: 10px; }
-        .roulette-result-title { font-size: 15px; font-weight: 700; color:var(--text-primary); margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .roulette-watch-btn { background:var(--accent); color:var(--accent-contrast); border:none; border-radius: 20px; padding: 10px 24px; font-weight: 700; cursor: pointer; }
-        @media (prefers-reduced-motion: reduce) {
-            .roulette-modal-overlay.open, .roulette-modal-box { animation: none !important; }
-            .roulette-wheel { transition: none !important; }
-        }
-    </style>
-    <div class="roulette-modal-overlay" id="rouletteModal" onclick="if(event.target===this) closeVideoRouletteModal()">
-        <div class="roulette-modal-box">
-            <button class="roulette-modal-close" onclick="closeVideoRouletteModal()"><i class="fas fa-xmark"></i></button>
-            <h3><i class="fas fa-dice" style="color:#fb923c;"></i> 오늘 뭐 볼지 골라드릴게요</h3>
-            <div class="roulette-wheel-wrap">
-                <div class="roulette-pointer"><i class="fas fa-caret-down"></i></div>
-                <div class="roulette-wheel" id="rouletteWheel"></div>
-            </div>
-            <div class="roulette-result" id="rouletteResult" style="display:none;">
-                <img id="rouletteResultThumb" alt="">
-                <div class="roulette-result-title" id="rouletteResultTitle"></div>
-                <button class="roulette-watch-btn" id="rouletteWatchBtn">보러 가기</button>
-            </div>
-            <button class="roulette-spin-btn" id="rouletteSpinBtn" onclick="spinVideoRoulette()">룰렛 돌리기</button>
-        </div>
-    </div>
-
     <div class="schedule-entry-modal-overlay" id="scheduleEntryModal" onclick="if(event.target===this) closeScheduleEntryModal()">
         <div class="schedule-entry-modal-box">
             <h3 id="scheduleEntryModalTitle">일정 추가</h3>
@@ -1704,7 +1665,6 @@ document.getElementById("scheduleEntryDeleteBtn").addEventListener("click", asyn
                     <button class="sidebar-bottom-link" id="spaPlaylistsBtn"><i class="fas fa-list"></i><span>재생목록</span></button>
                     <button class="sidebar-bottom-link" id="spaGalleryBtn" style="color:var(--text-primary);" onclick="showGallery()"><i class="fas fa-image" style="color:var(--accent);"></i><span>팬 갤러리</span></button>
                     <a href="#" class="sidebar-bottom-link" id="spaQuizBtn" onclick="event.preventDefault(); openQuizModal(); return false;"><i class="fas fa-question-circle" style="color:#f5c518;"></i><span>퀴즈</span></a>
-                    <a href="#" class="sidebar-bottom-link" id="spaRouletteBtn" onclick="event.preventDefault(); openVideoRouletteModal(); return false;"><i class="fas fa-dice" style="color:#fb923c;"></i><span>랜덤 영상 룰렛</span></a>
                     <a href="#" class="sidebar-bottom-link" id="spaScheduleBtn" onclick="event.preventDefault(); window.showSection('schedule'); return false;"><i class="fas fa-calendar-days" style="color:#4ade80;"></i><span>스케줄</span></a>
                     <a href="/highlights" class="sidebar-bottom-link" id="spaHighlightsBtn" onclick="event.preventDefault(); window.showSection('highlights'); return false;"><i class="fas fa-scissors" style="color:#f472b6;"></i><span>하이라이트</span></a>
                     <a href="https://discord.gg/swatakafam" target="_blank" class="sidebar-bottom-link discord-link"><i class="fab fa-discord"></i><span>디스코드</span></a>
@@ -2173,6 +2133,12 @@ function smoothScrollTrackBy(el, distance, duration) {
         #lumiResizeHandle:hover, #lumiResizeHandle.resizing { background: var(--accent, #38bdf8); opacity: .35; }
         body.lumi-resizing { cursor: ew-resize !important; user-select: none !important; }
         body.lumi-resizing #lumiChatWrap { transition: none !important; }
+        /* 칸(#lumiChatWrap)은 드래그 중 transition을 꺼서 마우스를 즉시 따라가는데,
+           접기 버튼(#lumiSidebarToggle)은 원래 right에 .25s ease 애니메이션이 걸려
+           있어서 빠르게 끌면 버튼이 한 박자 늦게 쫓아오는 것처럼 보였음("칸 넓혔더니
+           접기 버튼은 가만히 있는" 것처럼 보이던 원인) - 드래그 중엔 이 버튼도
+           transition을 꺼서 손잡이와 완전히 같이 움직이게 함. */
+        body.lumi-resizing #lumiSidebarToggle { transition: none !important; }
 
         #lumiChatHeader {
             display: flex; align-items: center; justify-content: space-between;
@@ -2439,141 +2405,6 @@ function smoothScrollTrackBy(el, distance, duration) {
         if (!inst.error) inst.start(); else el.textContent = endVal;
     }
 
-    var rouletteVideos = [];
-    var rouletteSpinning = false;
-    var rouletteCurrentRotation = 0;
-
-    function collectRouletteCandidates() {
-        var cards = Array.from(document.querySelectorAll('#videoGrid .video-card[data-video-id]'));
-        var seen = {};
-        var pool = [];
-        cards.forEach(function(c) {
-            var id = c.getAttribute('data-video-id');
-            if (!id || seen[id]) return;
-            seen[id] = true;
-            pool.push({ id: id, title: c.getAttribute('data-video-title') || '', thumb: c.getAttribute('data-video-thumb') || '' });
-        });
-        for (var i = pool.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
-        }
-        return pool.slice(0, 8);
-    }
-
-    function renderRouletteWheel(videos) {
-        var wheel = document.getElementById('rouletteWheel');
-        wheel.style.transition = 'none';
-        wheel.style.transform = 'rotate(0deg)';
-        rouletteCurrentRotation = 0;
-        wheel.innerHTML = '';
-        var n = videos.length;
-        var angleStep = 360 / n;
-        var radius = 100;
-        videos.forEach(function(v, i) {
-            var angle = angleStep * i;
-            var el = document.createElement('div');
-            el.className = 'roulette-item';
-            el.style.transform = 'rotate(' + angle + 'deg) translate(0, -' + radius + 'px)';
-            el.innerHTML = '<img src="' + v.thumb + '" alt="" loading="lazy">';
-            wheel.appendChild(el);
-        });
-        void wheel.offsetWidth;
-        wheel.style.transition = '';
-    }
-
-    function openVideoRouletteModal() {
-        var candidates = collectRouletteCandidates();
-        if (candidates.length < 2) {
-            showToast('룰렛을 돌릴 영상이 부족해요. 홈에서 영상을 좀 더 불러온 뒤 시도해주세요.', true);
-            return;
-        }
-        rouletteVideos = candidates;
-        renderRouletteWheel(rouletteVideos);
-        document.getElementById('rouletteResult').style.display = 'none';
-        var spinBtn = document.getElementById('rouletteSpinBtn');
-        spinBtn.style.display = 'inline-block';
-        spinBtn.disabled = false;
-        document.getElementById('rouletteModal').classList.add('open');
-    }
-
-    function closeVideoRouletteModal() {
-        document.getElementById('rouletteModal').classList.remove('open');
-        // 스핀 도중 모달을 닫아버리면 transitionend가 영영 안 와서
-        // rouletteSpinning이 true로 눌러붙는 문제가 있었음 - 닫을 때
-        // 강제로 정리해서 다음에 열었을 때 스핀이 항상 먹히게 함.
-        var wheel = document.getElementById('rouletteWheel');
-        if (wheel && wheel._rouletteFallback) { clearTimeout(wheel._rouletteFallback); wheel._rouletteFallback = null; }
-        rouletteSpinning = false;
-    }
-
-    function spinVideoRoulette() {
-        if (rouletteSpinning || rouletteVideos.length === 0) return;
-        rouletteSpinning = true;
-        var spinBtn = document.getElementById('rouletteSpinBtn');
-        spinBtn.disabled = true;
-        document.getElementById('rouletteResult').style.display = 'none';
-        var n = rouletteVideos.length;
-        var angleStep = 360 / n;
-        var winIndex = Math.floor(Math.random() * n);
-        var jitter = (Math.random() - 0.5) * angleStep * 0.6;
-        var targetAngle = winIndex * angleStep;
-        var extraSpins = 5 + Math.floor(Math.random() * 2);
-        var finalRotation = extraSpins * 360 + (360 - targetAngle) + jitter;
-        var wheel = document.getElementById('rouletteWheel');
-
-        function reveal() {
-            rouletteSpinning = false;
-            spinBtn.disabled = false;
-            var winner = rouletteVideos[winIndex];
-            document.getElementById('rouletteResultThumb').src = winner.thumb;
-            document.getElementById('rouletteResultTitle').textContent = winner.title;
-            var watchBtn = document.getElementById('rouletteWatchBtn');
-            watchBtn.onclick = function() {
-                closeVideoRouletteModal();
-                window.goToVideoAndSaveHistory(winner.id, winner.title, winner.thumb, 'video');
-            };
-            document.getElementById('rouletteResult').style.display = 'block';
-            if (typeof triggerConfetti === 'function') triggerConfetti({ particleCount: 90, spread: 80, origin: { y: 0.4 } });
-        }
-
-        // 다른 장식용 효과(컨페티, 카운트업 등)와 달리 이 회전 자체가 룰렛
-        // 기능의 핵심이라(안 보이면 그냥 결과가 뚝 튀어나오는 것처럼 느껴짐),
-        // OS/브라우저의 "동작 줄이기(prefers-reduced-motion)" 설정과 무관하게
-        // 항상 돌아가게 한다. 이 설정은 윈도우 "설정 > 접근성 > 시각 효과 >
-        // 애니메이션 효과 표시"를 꺼두면 자동으로 켜지는 경우가 많아서, 정작
-        // 사용자는 껐다는 걸 의식 못 한 채 "룰렛이 안 돈다"고 느끼는 경우가
-        // 흔함 - 그래서 여기서만큼은 무시함.
-        rouletteCurrentRotation += finalRotation;
-        // 브라우저가 "회전 시작 전 상태(0deg)"를 한 번도 실제로 페인트하지
-        // 못한 채(모달을 열자마자 바로 스핀하는 등, 같은 프레임에 초기값과
-        // 목표값이 같이 들어가는 경우) 목표 각도를 적용하면, transition이
-        // 재생되지 않고 바로 최종 각도로 점프해버려서 "룰렛이 도는 느낌"이
-        // 전혀 안 나는 문제가 있었음. 다음 프레임으로 한 번 미뤄서 0deg
-        // 상태가 먼저 화면에 반영되게 한 뒤 목표 각도를 적용해 transition이
-        // 확실히 걸리게 함.
-        requestAnimationFrame(function() {
-            requestAnimationFrame(function() {
-                wheel.style.transform = 'rotate(' + rouletteCurrentRotation + 'deg)';
-            });
-        });
-        var onDone = function() {
-            wheel.removeEventListener('transitionend', onDone);
-            if (wheel._rouletteFallback) { clearTimeout(wheel._rouletteFallback); wheel._rouletteFallback = null; }
-            reveal();
-        };
-        wheel.addEventListener('transitionend', onDone);
-        // transitionend가 어떤 이유로든(모달을 스핀 도중 닫았다가 다시 열거나,
-        // 탭이 백그라운드로 가서 transition이 씹히는 등) 안 오는 경우를 대비한
-        // 안전장치 - 이게 없으면 rouletteSpinning이 영원히 true로 남아서
-        // 다음 스핀 클릭이 계속 씹히는(마치 룰렛이 고장난 것처럼 보이는)
-        // 문제가 생김.
-        if (wheel._rouletteFallback) clearTimeout(wheel._rouletteFallback);
-        wheel._rouletteFallback = setTimeout(function() {
-            wheel.removeEventListener('transitionend', onDone);
-            wheel._rouletteFallback = null;
-            if (rouletteSpinning) reveal();
-        }, 4500);
-    }
     document.addEventListener("DOMContentLoaded", function() {
         var prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         window.prefersReducedMotion = prefersReducedMotion;
@@ -4747,7 +4578,25 @@ async function lumiAskAI(question, imageFile, imageURL) {
         try { data = await res.json(); } catch (e) {}
         if (!res.ok || !data || data.success === false) {
             const msg = (data && data.message) ? data.message : "지금은 대답하기 어려워...";
-            if (thinking) { thinking.bubble.textContent = msg; thinking.msg.classList.remove("lumi-msg-thinking"); }
+            if (thinking) {
+                thinking.msg.classList.remove("lumi-msg-thinking");
+                if (res.status === 403 && msg.indexOf("로그인") !== -1) {
+                    // 비로그인 1회 질문 제한에 걸린 경우 - 메시지만 보여주고 끝내는
+                    // 대신 바로 로그인 모달을 열 수 있는 버튼도 같이 보여준다.
+                    thinking.bubble.textContent = "";
+                    const textSpan = document.createElement("span");
+                    textSpan.textContent = msg;
+                    thinking.bubble.appendChild(textSpan);
+                    const loginBtn = document.createElement("button");
+                    loginBtn.type = "button";
+                    loginBtn.textContent = "로그인하기";
+                    loginBtn.style.cssText = "display:block; margin-top:8px; padding:7px 14px; border:none; border-radius:999px; background:var(--accent,#38bdf8); color:#fff; font-size:12.5px; font-weight:700; cursor:pointer;";
+                    loginBtn.onclick = () => { if (typeof openLoginModal === "function") openLoginModal(); };
+                    thinking.bubble.appendChild(loginBtn);
+                } else {
+                    thinking.bubble.textContent = msg;
+                }
+            }
             return;
         }
         const reply = (data.reply || "").trim() || "음... 뭐라고 해야 할지 모르겠어!";
@@ -4781,6 +4630,24 @@ async function lumiAskAI(question, imageFile, imageURL) {
 }
 window.lumiAskAI = lumiAskAI;
 
+// 루미 칸 접기 버튼(#lumiSidebarToggle)은 CSS에 right: 380px로 칸의 "기본"
+// 너비만큼만 고정되어 있었다. 그런데 칸은 #lumiResizeHandle로 너비를 늘리고
+// 줄일 수 있는데(아래 initLumiResize), 그때 칸의 실제 왼쪽 경계는 움직여도
+// 이 버튼의 right 값은 그대로라 "칸을 넓혔더니(왼쪽으로 밀었더니) 접기
+// 버튼은 원래 자리에 가만히 있고 칸 경계선만 따로 움직이는" 것처럼 보이는
+// 버그가 있었다. 이 함수가 매번 버튼의 right를 칸의 실제 너비(또는 접힌
+// 상태면 0)에 맞춰 갱신해준다.
+function syncLumiToggleRight() {
+    const toggle = document.getElementById("lumiSidebarToggle");
+    const wrap = document.getElementById("lumiChatWrap");
+    if (!toggle || !wrap) return;
+    if (document.body.classList.contains("lumi-sidebar-hidden")) {
+        toggle.style.right = "0px";
+    } else {
+        toggle.style.right = wrap.getBoundingClientRect().width + "px";
+    }
+}
+
 // 오른쪽 칸을 접고 펼치는 로직. 접힌 상태는 sessionStorage에 저장돼 새로고침해도
 // 유지되고, 탭 버튼은 접혀 있어도 화면에 남아있어 다시 펼 수 있다.
 function setLumiSidebarHidden(hidden) {
@@ -4792,6 +4659,7 @@ function setLumiSidebarHidden(hidden) {
         toggle.title = hidden ? "루미 칸 펼치기" : "루미 칸 접기";
     }
     try { sessionStorage.setItem("lumiHidden", hidden ? "1" : "0"); } catch (e) {}
+    syncLumiToggleRight();
 }
 window.setLumiSidebarHidden = setLumiSidebarHidden;
 
@@ -4810,6 +4678,7 @@ function initLumiResize() {
             wrap.style.width = saved + "px";
         }
     } catch (e) {}
+    syncLumiToggleRight();
 
     let dragging = false;
     let startX = 0;
@@ -4824,6 +4693,7 @@ function initLumiResize() {
         let next = startWidth + delta;
         next = Math.max(LUMI_WIDTH_MIN, Math.min(LUMI_WIDTH_MAX, next));
         wrap.style.width = next + "px";
+        syncLumiToggleRight();
     }
     function onUp() {
         if (!dragging) return;
@@ -4835,6 +4705,7 @@ function initLumiResize() {
         document.removeEventListener("touchmove", onMove);
         document.removeEventListener("touchend", onUp);
         try { localStorage.setItem("lumiChatWidth", String(wrap.getBoundingClientRect().width | 0)); } catch (e) {}
+        syncLumiToggleRight();
     }
     function onDown(e) {
         dragging = true;

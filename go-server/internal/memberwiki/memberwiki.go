@@ -88,7 +88,29 @@ var httpClient = &http.Client{Timeout: fetchTimeout}
 // 실패하면 ok=false를 돌려준다(이 경우 호출 쪽은 그냥 조용히 넘어가면 됨 -
 // 없는 정보를 억지로 지어낼 필요는 없음).
 func FetchFromNamuwiki(ctx context.Context, name string) (result Result, ok bool) {
-	pageURL := "https://namu.wiki/w/" + url.PathEscape(name)
+	return fetchAndParsePage(ctx, name, name)
+}
+
+// FetchPairingFromNamuwiki는 "김블루 - 강지 우결"처럼 두 멤버 이름과 이벤트/관계
+// 키워드를 조합한 나무위키 하위 문서를 가져온다. 나무위키는 등재된 순서가
+// 정해져 있지 않아서(먼저 데뷔한 쪽이 앞에 오는 경우가 많지만 항상 그런 건
+// 아님), "A - B 키워드"와 "B - A 키워드" 두 순서를 순서대로 시도해서 먼저
+// 성공하는 쪽을 쓴다.
+func FetchPairingFromNamuwiki(ctx context.Context, nameA, nameB, keyword string) (result Result, ok bool) {
+	titleAB := nameA + " - " + nameB + " " + keyword
+	if result, ok = fetchAndParsePage(ctx, titleAB, titleAB); ok {
+		return result, true
+	}
+	titleBA := nameB + " - " + nameA + " " + keyword
+	return fetchAndParsePage(ctx, titleBA, titleBA)
+}
+
+// fetchAndParsePage는 나무위키 문서 하나를 받아와 요약(og:description)과
+// 정보 상자를 파싱하는 공통 로직. sourceLabel은 답변에 붙는 출처 문구에 쓸
+// 이름(멤버 문서면 멤버 이름, 페어링 문서면 문서 제목 그대로)이고, pageTitle은
+// 실제 요청할 문서 제목(URL 인코딩 전).
+func fetchAndParsePage(ctx context.Context, pageTitle, sourceLabel string) (result Result, ok bool) {
+	pageURL := "https://namu.wiki/w/" + url.PathEscape(pageTitle)
 
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
@@ -137,7 +159,7 @@ func FetchFromNamuwiki(ctx context.Context, name string) (result Result, ok bool
 		return Result{}, false // 문서가 없거나(404), 알아볼 수 있는 형태가 아님
 	}
 
-	sourceNote := fmt.Sprintf(sourceLabelFmt, name)
+	sourceNote := fmt.Sprintf(sourceLabelFmt, sourceLabel)
 	if bio != "" {
 		bio = bio + " " + sourceNote
 	} else {
