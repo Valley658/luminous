@@ -205,6 +205,30 @@ var (
 	lumiPoliteSeyoTailAny = regexp.MustCompile(`세요([.!?~,\n]|$)`)
 )
 
+// containsChineseHanzi는 텍스트 안에 CJK 한자(중국어에서 쓰는 한자 블록)가
+// 있는지 확인한다. 한국어(한글)는 이 유니코드 블록을 전혀 쓰지 않으므로,
+// 여기 걸리면 십중팔구 로컬 3B 모델(qwen2.5)이 한국어 대신 중국어로 새어나간
+// 경우다 - 작은 다국어 모델이 불확실하거나 반복되는 상황에서 학습 데이터
+// 비중이 큰 중국어로 드리프트하는 건 알려진 한계라, 프롬프트 규칙만으로는
+// 100% 못 막는다(반말 안전망 sanitizeLumiBanmal과 같은 이유).
+func containsChineseHanzi(s string) bool {
+	for _, r := range s {
+		if (r >= 0x4E00 && r <= 0x9FFF) || // CJK Unified Ideographs
+			(r >= 0x3400 && r <= 0x4DBF) || // CJK Extension A
+			(r >= 0xF900 && r <= 0xFAFF) { // CJK Compatibility Ideographs
+			return true
+		}
+	}
+	return false
+}
+
+// promptRequestsChinese는 방문자가 실제로 "중국어로 알려줘"처럼 중국어 답변을
+// 명시적으로 요청했는지 확인한다 - 이 경우엔 중국어 한자가 나오는 게 정상
+// 동작(위 lumiLanguageRequestHints 참고)이니 아래 안전망 대상에서 빼야 한다.
+func promptRequestsChinese(prompt string) bool {
+	return strings.Contains(prompt, "중국어")
+}
+
 func sanitizeLumiBanmal(reply string) string {
 	s := reply
 	s = lumiFormalJoesonghamnida.ReplaceAllString(s, "미안해")
@@ -946,6 +970,22 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 			httputil.JSONError(w, http.StatusServiceUnavailable, "지금은 대답하기 어려워... 잠시 후 다시 시도해줘.")
 		}
 		return
+	}
+
+	// 로컬 3B 모델이 가끔 한국어 대신 중국어로 새어나가는 경우가 있다(방문자가
+	// 직접 중국어를 요청한 게 아닌데도) - 걸리면 한 번만 더 "방금 중국어로
+	// 나왔으니 한국어로만 다시 답해"라고 강하게 재요청해보고, 그래도 또
+	// 중국어가 섞여 나오면 억지로 중국어 문장을 한국어인 척 내보내는 대신
+	// 방문자에게 솔직히 상태를 알리고 대화내용초기화 버튼을 안내하는 고정
+	// 대사로 대체한다(이 대사 자체는 100% 반말 한국어라 안전).
+	if !promptRequestsChinese(prompt) && containsChineseHanzi(reply) {
+		retryPrompt := "[중요: 방금 네 답변이 한국어가 아니라 중국어로 나왔어. 반드시 100% 한국어(한글)로만, " +
+			"중국어 한자는 단 한 글자도 섞지 말고 같은 내용을 다시 답해.]\n\n" + grounded
+		if retryReply, retryErr := a.LocalAI.Ask(ctx, systemPrompt, retryPrompt); retryErr == nil && !containsChineseHanzi(retryReply) {
+			reply = retryReply
+		} else {
+			reply = "어... 나 지금 대답이 좀 꼬였나봐! 미안해, 위에 있는 '대화내용초기화' 버튼 눌러서 다시 한번 물어봐줄래?"
+		}
 	}
 
 	// 로컬 LLM이 직접 생성한 답변에만 존댓말→반말 안전망을 적용한다(캐시에도
