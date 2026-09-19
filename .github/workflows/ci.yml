@@ -8,7 +8,7 @@ on:
 
 jobs:
   go:
-    name: Go build / vet / fmt / test
+    name: Go build / vet / fmt / test / security
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -17,14 +17,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # source only - the committed .exe/.onnx/.dll LFS blobs aren't needed to
-          # build or test the Go code, and pulling them just slows CI down.
           lfs: false
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go-server/go.mod
+          cache-dependency-path: go-server/go.sum
 
       - name: gofmt check
         run: |
@@ -37,6 +36,11 @@ jobs:
 
       - name: go vet
         run: go vet ./...
+
+      - name: Run govulncheck (Security Scan)
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
 
       - name: go build (native)
         run: go build -buildvcs=false ./...
