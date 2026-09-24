@@ -25,7 +25,7 @@ type GroupedGeneration struct {
 }
 
 var SIDEBAR_MEMBERS = []Member{
-	{Name: "스텔라이브", Img: "/static/logo/logo.webp", ChzzkID: ""},
+	{Name: "스텔라이브", Img: "/static/logo/stellalive_icon.webp", ChzzkID: ""},
 	{Name: "칸나", Img: "/static/images/members/kanna.webp", ChzzkID: ""},
 	{Name: "유니", Img: "/static/images/members/yuni.webp", ChzzkID: "45e71a76e949e16a34764deb962f9d9f"},
 	{Name: "후야", Img: "/static/images/members/huya.webp", ChzzkID: "36ddb9bb4f17593b60f1b63cec86611d"},

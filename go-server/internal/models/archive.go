@@ -12,7 +12,23 @@ import (
 
 func InitMemberVideoArchiveTable(d *pdb.DB) error {
 	if d.Backend == "mysql" {
-		return nil
+		_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS member_video_archive (
+			id INT PRIMARY KEY AUTO_INCREMENT,
+			video_id VARCHAR(20) NOT NULL UNIQUE,
+			member_name VARCHAR(100) NULL,
+			channel_id VARCHAR(50) NULL,
+			title VARCHAR(500) NULL,
+			thumbnail VARCHAR(500) NULL,
+			is_short TINYINT(1) DEFAULT 0,
+			created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+			KEY idx_member_name (member_name),
+			KEY idx_channel_id (channel_id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+		_, err := d.Exec(`CREATE TABLE IF NOT EXISTS member_archive_sync_state (
+			channel_id VARCHAR(50) PRIMARY KEY,
+			last_full_sync_at DATETIME NULL
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+		return err
 	}
 	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS member_video_archive (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

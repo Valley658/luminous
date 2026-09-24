@@ -68,14 +68,14 @@ func isValidNicknameContent(nickname string) bool {
 	return true
 }
 
-func validateNewCredentials(nickname, loginID, password, currentNickname string) string {
+func validateNewCredentials(nickname, loginID, password, currentNickname string, allowReservedNickname bool) string {
 	if nickname == "" {
 		return "닉네임을 입력해주세요."
 	}
 	if nickname != currentNickname && !isValidNicknameContent(nickname) {
 		return "닉네임에 사용할 수 없는 문자가 포함되어 있거나 20자를 초과했습니다."
 	}
-	if staffNicknames[nickname] && nickname != currentNickname {
+	if staffNicknames[nickname] && nickname != currentNickname && !allowReservedNickname {
 		return "'" + nickname + "'은(는) 사용할 수 없는 닉네임입니다."
 	}
 	if !loginIDPattern.MatchString(loginID) {
@@ -103,7 +103,16 @@ func (a *App) Register(w http.ResponseWriter, r *http.Request) {
 	loginID := strings.TrimSpace(req.LoginID)
 	password := req.Password
 
-	if msg := validateNewCredentials(nickname, loginID, password, ""); msg != "" {
+	// DB가 비어있는(=완전히 새로 만들어진) 상태에서만, 예약된 닉네임(리도 등)으로
+	// 첫 계정을 만드는 것을 1회 허용한다. 유저가 1명이라도 있으면 이 예외는
+	// 즉시 다시 잠긴다 - 재부팅/재실행해도 다시 열리지 않는 자동 잠금 장치.
+	allowReserved := false
+	var userCount int64
+	if err := a.DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount); err == nil && userCount == 0 {
+		allowReserved = true
+	}
+
+	if msg := validateNewCredentials(nickname, loginID, password, "", allowReserved); msg != "" {
 		httputil.JSONError(w, 400, msg)
 		return
 	}

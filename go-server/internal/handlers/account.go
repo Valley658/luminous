@@ -59,7 +59,7 @@ func (a *App) ApiSetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if msg := validateNewCredentials(nickname, loginID, password, currentNickname); msg != "" {
+	if msg := validateNewCredentials(nickname, loginID, password, currentNickname, false); msg != "" {
 		httputil.JSONError(w, http.StatusBadRequest, msg)
 		return
 	}

@@ -36,6 +36,7 @@ type Config struct {
 	AdminHostname string
 
 	CookieSecure bool
+	CookieDomain string
 
 	YoutubeAPIKey string
 
@@ -174,9 +175,41 @@ func randomHexSecret(n int) string {
 	return hex.EncodeToString(b)
 }
 
+// defaultCookieDomain은 로그인 세션 쿠키를 admin.pastellive.co.kr 같은
+// 서브도메인에도 같이 보낼 수 있게 기본 쿠키 Domain 값을 계산한다.
+//
+// [2026-09-22: "리도" 계정으로 pastellive.co.kr에 로그인해도 admin.pastellive.co.kr
+// 접속 시 관리자 권한이 인식되지 않는 버그의 원인 - 예전엔 세션 쿠키에 Domain을
+// 아예 안 지정했는데, 브라우저는 Domain이 없는 쿠키를 "호스트 전용"으로 취급해서
+// 로그인한 그 정확한 호스트(pastellive.co.kr)에만 쿠키를 돌려보내고 다른
+// 서브도메인(admin.pastellive.co.kr)에는 보내지 않는다 - 그래서 관리자 페이지에선
+// 항상 비로그인 상태로 보였던 것. 앞에 점(".")을 붙인 Domain을 지정하면 같은
+// 루트 도메인의 모든 서브도메인에 쿠키가 공유된다.]
+//
+// localhost/사설 IP로 로컬 개발 중일 땐 Domain을 지정하면 오히려 쿠키가 전혀
+// 안 먹으므로(브라우저가 그런 값은 거부함) 빈 문자열(옛날처럼 호스트 전용)로 둔다.
+func defaultCookieDomain(siteHost string) string {
+	h := strings.TrimSpace(siteHost)
+	if h == "" || h == "localhost" || !strings.Contains(h, ".") {
+		return ""
+	}
+	isIP := true
+	for _, r := range h {
+		if (r < '0' || r > '9') && r != '.' {
+			isIP = false
+			break
+		}
+	}
+	if isIP {
+		return ""
+	}
+	return "." + h
+}
+
 func Load(projectDir string) *Config {
 	dbDir := filepath.Join(projectDir, "db")
 	staticDir := filepath.Join(projectDir, "static")
+	siteHost := getenv("SITE_HOST", "pastellive.co.kr")
 
 	return &Config{
 		DBBackend:  strings.ToLower(strings.TrimSpace(getenv("DB_BACKEND", "sqlite"))),
@@ -197,12 +230,13 @@ func Load(projectDir string) *Config {
 		ProjectDir:   projectDir,
 		StaticDir:    staticDir,
 		TemplatesDir: getenv("TEMPLATES_DIR", filepath.Join(projectDir, "templates")),
-		SiteHost:     getenv("SITE_HOST", "pastellive.co.kr"),
+		SiteHost:     siteHost,
 
 		AdminNickname: getenv("ADMIN_NICKNAME", ""),
 		AdminHostname: getenv("ADMIN_HOSTNAME", "admin.pastellive.co.kr"),
 
 		CookieSecure: getenvBool("COOKIE_SECURE", true),
+		CookieDomain: getenv("COOKIE_DOMAIN", defaultCookieDomain(siteHost)),
 
 		YoutubeAPIKey:     getenv("YOUTUBE_API_KEY", ""),
 		GoogleDriveAPIKey: getenv("GOOGLE_DRIVE_API_KEY", ""),
@@ -233,7 +267,13 @@ func Load(projectDir string) *Config {
 		// 됐는데, CPU 전용 서버에서는 토큰 수만큼 그대로 추론 시간/CPU 사용량이
 		// 늘어난다. 하드웨어 사정에 맞게 재배포 없이 .env에서 바로 조절할 수
 		// 있게 환경변수로 뺌 - CPU가 버거우면 이 값을 줄이면 됨(예: 140).
-		OllamaNumPredict: getenvInt("OLLAMA_NUM_PREDICT", 220),
+		// [2026-09-22: 220이었을 때 파이썬 코드처럼 조금만 길어져도 답변이
+		// 중간에 뚝 끊기는 문제가 있었음(마크다운 코드블록도 닫는 ``` 가 안
+		// 나와서 렌더링이 깨짐). num_predict는 "최대 길이"일 뿐 모델이 스스로
+		// 끝났다고 판단하면 그 전에 멈추니, 짧은 답은 그대로 짧게 끝나고 긴
+		// 답만 끝까지 나올 여유가 생긴다 - 값을 올려도 짧은 질문의 응답 속도는
+		// 거의 그대로임.]
+		OllamaNumPredict: getenvInt("OLLAMA_NUM_PREDICT", 700),
 
 		// 루미 AI가 답변 전에 짧게 웹 검색을 해서 최신/정확한 정보를 참고하게 할지.
 		// Selenium 같은 브라우저 자동화 없이 순수 HTTP로만 동작함 (자세한 설명은

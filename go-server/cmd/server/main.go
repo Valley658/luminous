@@ -130,6 +130,9 @@ func main() {
 	if _, err := database.Exec("DROP TABLE IF EXISTS public_error_events"); err != nil {
 		log.Printf("public_error_events 테이블 정리 실패: %v", err)
 	}
+	if err := models.DropUnusedTables(database); err != nil {
+		log.Printf("사용하지 않는 테이블 정리 실패: %v", err)
+	}
 	if _, err := database.Exec(`CREATE TABLE IF NOT EXISTS fanart_phash (
 		fanart_id INT PRIMARY KEY,
 		hash VARCHAR(16) NOT NULL,
@@ -146,8 +149,17 @@ func main() {
 	if err := models.InitPlaylistVideoItemsTable(database); err != nil {
 		log.Fatalf("user_playlist_videos 테이블 초기화 실패: %v", err)
 	}
+	// [2026-09-21: MySQL 백엔드에서 삭제된 옛 Python 앱 스키마를 전제로 하던
+	// 테이블들(members 포함, 총 14개+users 컬럼 일부)이 새 DB에서는 아예
+	// 생성되지 않던 문제 - 아래 두 함수가 이를 한 번에 복구한다.]
+	if err := models.InitMySQLMissingTables(database); err != nil {
+		log.Fatalf("MySQL 누락 테이블 초기화 실패: %v", err)
+	}
+	if err := models.InitMembersTable(database); err != nil {
+		log.Fatalf("members 테이블 초기화 실패: %v", err)
+	}
 
-	sessionStore := session.NewStore(cfg.SecretKey, cfg.CookieSecure)
+	sessionStore := session.NewStore(cfg.SecretKey, cfg.CookieSecure, cfg.CookieDomain)
 	app := handlers.New(database, cfg, sessionStore)
 	app.WarmUpLocalAI()
 

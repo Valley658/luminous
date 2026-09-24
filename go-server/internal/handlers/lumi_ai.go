@@ -205,6 +205,30 @@ var (
 	lumiPoliteSeyoTailAny = regexp.MustCompile(`세요([.!?~,\n]|$)`)
 )
 
+// containsChineseHanzi는 텍스트 안에 CJK 한자(중국어에서 쓰는 한자 블록)가
+// 있는지 확인한다. 한국어(한글)는 이 유니코드 블록을 전혀 쓰지 않으므로,
+// 여기 걸리면 십중팔구 로컬 3B 모델(qwen2.5)이 한국어 대신 중국어로 새어나간
+// 경우다 - 작은 다국어 모델이 불확실하거나 반복되는 상황에서 학습 데이터
+// 비중이 큰 중국어로 드리프트하는 건 알려진 한계라, 프롬프트 규칙만으로는
+// 100% 못 막는다(반말 안전망 sanitizeLumiBanmal과 같은 이유).
+func containsChineseHanzi(s string) bool {
+	for _, r := range s {
+		if (r >= 0x4E00 && r <= 0x9FFF) || // CJK Unified Ideographs
+			(r >= 0x3400 && r <= 0x4DBF) || // CJK Extension A
+			(r >= 0xF900 && r <= 0xFAFF) { // CJK Compatibility Ideographs
+			return true
+		}
+	}
+	return false
+}
+
+// promptRequestsChinese는 방문자가 실제로 "중국어로 알려줘"처럼 중국어 답변을
+// 명시적으로 요청했는지 확인한다 - 이 경우엔 중국어 한자가 나오는 게 정상
+// 동작(위 lumiLanguageRequestHints 참고)이니 아래 안전망 대상에서 빼야 한다.
+func promptRequestsChinese(prompt string) bool {
+	return strings.Contains(prompt, "중국어")
+}
+
 func sanitizeLumiBanmal(reply string) string {
 	s := reply
 	s = lumiFormalJoesonghamnida.ReplaceAllString(s, "미안해")
@@ -260,7 +284,12 @@ func buildCurrentDateTimeFact() string {
 // 실시간 CHZZK 라이브 상태(misc.go의 computeLiveStatus/liveStatusCacheKey)를
 // 매 질문마다 새로 읽어서 시스템 프롬프트에 사실 그대로 박아넣는다. 이전엔 이
 // 정보가 전혀 전달되지 않아서 모델이 그냥 지어내거나 "모른다"고 답했었음.
-func (a *App) buildLiveStatusFact() string {
+// currentLiveMemberNames는 /api/live_status와 같은 실시간 CHZZK 라이브 상태를
+// 읽어서 지금 라이브 중인 멤버의 정식 이름 목록을 돌려준다.
+// buildLiveStatusFact(시스템 프롬프트용)와 isLumiLiveStatusQuestion 처리
+// (LLM 없이 바로 답하는 지름길용) 둘 다 이 함수 하나를 공유한다 - 로직이
+// 두 군데로 나뉘어 있다가 한쪽만 고쳐서 어긋나는 일이 없도록.
+func (a *App) currentLiveMemberNames() []string {
 	var status map[string]bool
 	if cached, ok := a.Cache.Get(liveStatusCacheKey); ok {
 		if m, ok2 := cached.(map[string]bool); ok2 {
@@ -285,11 +314,48 @@ func (a *App) buildLiveStatusFact() string {
 			live = append(live, full)
 		}
 	}
+	return live
+}
 
+func (a *App) buildLiveStatusFact() string {
+	live := a.currentLiveMemberNames()
 	if len(live) == 0 {
 		return "[지금 이 순간 실제 라이브 상태]\n지금 라이브 중인 멤버는 아무도 없음(전부 오프라인)."
 	}
 	return "[지금 이 순간 실제 라이브 상태]\n지금 라이브(방송) 중: " + strings.Join(live, ", ") + ". 나머지 멤버는 지금 오프라인."
+}
+
+// isLumiLiveStatusQuestion은 "지금 라이브 중인 사람 있어?", "누구 방송해?" 같은
+// 실시간 라이브 여부 질문을 감지한다. 이것도 갤러리/사이트정보 질문과 같은
+// 이유로 LLM을 거치지 않고 바로 답한다 - 라이브 상태는 정확도가 특히
+// 중요한데(방문자가 그 답을 믿고 바로 보러 가니까), 작은 로컬 모델이 프롬프트에
+// 있는 실시간 정보를 가끔 놓치거나 다른 말로 흐릴 수 있어서, 아예 그 정보를
+// 코드에서 직접 계산해 문장으로 만들어 넘겨버리는 게 훨씬 안전하다.
+func isLumiLiveStatusQuestion(prompt string) bool {
+	hasLiveWord := strings.Contains(prompt, "라이브") || strings.Contains(prompt, "방송")
+	if !hasLiveWord {
+		return false
+	}
+	return strings.Contains(prompt, "누구") || strings.Contains(prompt, "중이") || strings.Contains(prompt, "중인") ||
+		strings.Contains(prompt, "하고있") || strings.Contains(prompt, "하고 있") || strings.Contains(prompt, "있어") ||
+		strings.Contains(prompt, "누가")
+}
+
+// lumiLiveStatusReply: 실시간 라이브 상태를 바로 계산해서 자연스러운 반말
+// 문장으로 답한다(LLM 없음). 라이브 중인 멤버가 있으면 이름을 나열하고,
+// 없으면 없다고 솔직히 답한다.
+func (a *App) lumiLiveStatusReply() map[string]any {
+	live := a.currentLiveMemberNames()
+	if len(live) == 0 {
+		return map[string]any{"success": true, "reply": "지금은 라이브 중인 멤버가 아무도 없어! 스케줄 확인해보고 다음 방송을 기다려보자~"}
+	}
+	var reply string
+	if len(live) == 1 {
+		reply = "지금 " + live[0] + " 라이브 중이야! 왼쪽 사이드바에서 바로 보러 갈 수 있어."
+	} else {
+		reply = "지금 라이브 중인 멤버는 " + strings.Join(live, ", ") + "야! 왼쪽 사이드바에서 바로 보러 갈 수 있어."
+	}
+	return map[string]any{"success": true, "reply": reply}
 }
 
 // buildScheduleFact는 사이트의 방송 스케줄표(멤버들이 직접 등록한 오늘 일정)를
@@ -835,6 +901,14 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// "지금 라이브 중인 사람 있어?" 류 질문도 LLM 없이 바로 답한다 - 위
+	// isLumiLiveStatusQuestion 주석 참고. 정확도가 특히 중요한 질문이라
+	// 코드에서 직접 계산한 값을 그대로 문장으로 돌려준다.
+	if len(imageBytes) == 0 && isLumiLiveStatusQuestion(prompt) {
+		a.sendLumiReply(w, userID, prompt, a.lumiLiveStatusReply())
+		return
+	}
+
 	ip := httputil.GetClientIP(r)
 	if ip == "" {
 		ip = "unknown"
@@ -931,6 +1005,34 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		systemPrompt += "\n\n" + imageFact
 	}
 
+	// [2026-09-18: 작은 로컬 모델은 시스템 프롬프트 맨 위쪽에 있는 규칙보다
+	// 질문 바로 앞(맨 아래)에 있는 내용에 훨씬 강하게 영향을 받는다 - 실제로
+	// "네 이름이 뭐야?" 같은 질문에 위쪽 [루미가 누구인지] 대신, 맨 아래쪽에
+	// 붙는 [멤버별 상세 정보]나 [스텔라이브 멤버 목록]에서 아무 멤버나(예: 리코)
+	// 골라서 그 멤버의 종족/생년월일 같은 프로필을 자기 것인 양 대답해버리는
+	// 문제가 있었음. 그래서 모든 참고자료를 다 붙인 다음, 맨 마지막에 정체성만
+	// 다시 한번 짧고 강하게 못박아준다 - 이게 실제 질문과 가장 가까운 위치라
+	// 작은 모델이 가장 잘 따른다.]
+	systemPrompt += "\n\n[마지막으로 다시 한번 - 너는 누구인가]\n" +
+		"위에 나온 [스텔라이브 멤버 목록]과 [멤버별 상세 정보](종족, 생년월일, 소속 기수 등)는 " +
+		"전부 네가 방문자에게 소개해줄 수 있는 '다른 사람들'에 대한 참고 자료일 뿐이야 - " +
+		"그 안의 어떤 이름도, 어떤 프로필도 너 자신이 아니야. 너는 그 목록에 있는 멤버가 " +
+		"아니라 이 팬사이트 '루미너스'에 사는 마스코트 '루미'야. 네 이름이나 정체성을 " +
+		"물어보면 그 목록에서 아무나 골라 자기소개처럼 답하지 말고, 반드시 \"나는 루미야!\" " +
+		"처럼 네 진짜 이름으로만 답해.\n" +
+		"**단, 이 지적은 딱 '이름/정체성이 뭐야' 같은 질문에서 로스터 멤버 이름을 대신 " +
+		"가져다 쓰지 말라는 뜻일 뿐이야 - 질문이 뭐든 상관없이 매번 \"나는 루미야!\"라고만 " +
+		"짧게 끊어 답하라는 뜻이 절대 아니야.** \"뭐 하는 애야?\", \"취향이 뭐야?\", \"성격이 " +
+		"어때?\"처럼 네 정체성이 아니라 너에 대한 다른 질문을 받으면, 위 [루미가 누구인지]/" +
+		"[말투 예시] 내용을 바탕으로 질문에 실제로 맞는 내용을 위 (5)번 규칙대로 3~6문장 " +
+		"충분히 풀어서 답해 - \"나는 루미야!\"만 반복하고 끝내는 건 성의 없는 회피지 답이 아니야.\n" +
+		"**질문이 여러 개를 한 번에 물어보는 경우(예: \"너는 뭐하는 AI이며 이름이 뭐야\"처럼 " +
+		"정체성 + 다른 내용이 같이 있는 질문)에는, 제일 짧게 답할 수 있는 부분(이름)만 골라서 " +
+		"그것만 답하고 끝내지 마 - 질문에 있는 부분들 전부에 순서대로 다 답해. 예를 들어 " +
+		"\"너는 뭐하는 AI이며 이름이 뭐야\"에는 \"나는 루미야!\" 한마디로 끝내지 말고, 로봇/AI가 " +
+		"아니라 이 사이트에 사는 마스코트라는 점과 네가 하는 일(방문자와 대화하고, 스텔라이브 " +
+		"얘기 나누고, 라이브 알림 주는 것 등)까지 자연스러운 문장으로 같이 풀어서 답해."
+
 	reply, err := a.LocalAI.Ask(ctx, systemPrompt, grounded)
 	if err != nil {
 		switch {
@@ -946,6 +1048,22 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 			httputil.JSONError(w, http.StatusServiceUnavailable, "지금은 대답하기 어려워... 잠시 후 다시 시도해줘.")
 		}
 		return
+	}
+
+	// 로컬 3B 모델이 가끔 한국어 대신 중국어로 새어나가는 경우가 있다(방문자가
+	// 직접 중국어를 요청한 게 아닌데도) - 걸리면 한 번만 더 "방금 중국어로
+	// 나왔으니 한국어로만 다시 답해"라고 강하게 재요청해보고, 그래도 또
+	// 중국어가 섞여 나오면 억지로 중국어 문장을 한국어인 척 내보내는 대신
+	// 방문자에게 솔직히 상태를 알리고 대화내용초기화 버튼을 안내하는 고정
+	// 대사로 대체한다(이 대사 자체는 100% 반말 한국어라 안전).
+	if !promptRequestsChinese(prompt) && containsChineseHanzi(reply) {
+		retryPrompt := "[중요: 방금 네 답변이 한국어가 아니라 중국어로 나왔어. 반드시 100% 한국어(한글)로만, " +
+			"중국어 한자는 단 한 글자도 섞지 말고 같은 내용을 다시 답해.]\n\n" + grounded
+		if retryReply, retryErr := a.LocalAI.Ask(ctx, systemPrompt, retryPrompt); retryErr == nil && !containsChineseHanzi(retryReply) {
+			reply = retryReply
+		} else {
+			reply = "어... 나 지금 대답이 좀 꼬였나봐! 미안해, 위에 있는 '대화내용초기화' 버튼 눌러서 다시 한번 물어봐줄래?"
+		}
 	}
 
 	// 로컬 LLM이 직접 생성한 답변에만 존댓말→반말 안전망을 적용한다(캐시에도

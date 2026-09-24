@@ -4,7 +4,19 @@ import pdb "pastellive/internal/db"
 
 func InitAdminAuditLogTable(d *pdb.DB) error {
 	if d.Backend == "mysql" {
-		return nil
+		_, err := d.Exec(`CREATE TABLE IF NOT EXISTS admin_audit_log (
+			id INT PRIMARY KEY AUTO_INCREMENT,
+			admin_email VARCHAR(255) NULL,
+			admin_nickname VARCHAR(100) NULL,
+			action VARCHAR(100) NOT NULL,
+			target_type VARCHAR(50) NULL,
+			target_id VARCHAR(100) NULL,
+			detail TEXT NULL,
+			ip_address VARCHAR(45) NULL,
+			created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+			KEY idx_created_at (created_at)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+		return err
 	}
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS admin_audit_log (
@@ -43,7 +55,15 @@ func nullIfEmpty(s string) any {
 
 func InitLiveCheersTable(d *pdb.DB) error {
 	if d.Backend == "mysql" {
-		return nil
+		_, err := d.Exec(`CREATE TABLE IF NOT EXISTS live_cheers (
+			id INT PRIMARY KEY AUTO_INCREMENT,
+			member_name VARCHAR(50) NOT NULL,
+			nickname VARCHAR(50) NOT NULL,
+			message TEXT NOT NULL,
+			ip_address VARCHAR(45) NULL,
+			created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+		return err
 	}
 	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS live_cheers (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

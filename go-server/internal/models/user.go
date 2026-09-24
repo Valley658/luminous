@@ -61,7 +61,28 @@ func (u *User) PictureOr(def string) string {
 
 func InitUsersTable(d *pdb.DB) error {
 	if d.Backend == "mysql" {
-		return nil
+		_, err := d.Exec(`CREATE TABLE IF NOT EXISTS users (
+			id INT PRIMARY KEY AUTO_INCREMENT,
+			email VARCHAR(255) NULL,
+			name VARCHAR(255) NULL,
+			picture TEXT NULL,
+			nickname VARCHAR(50) NULL,
+			last_ip VARCHAR(45) NULL,
+			channel_id VARCHAR(30) NULL,
+			channel_description TEXT NULL,
+			channel_link VARCHAR(255) NULL,
+			channel_country VARCHAR(50) NULL,
+			login_id VARCHAR(30) NULL,
+			password_hash VARCHAR(255) NULL,
+			discord_id VARCHAR(30) NULL,
+			discord_username VARCHAR(64) NULL,
+			created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uniq_users_channel_id (channel_id),
+			UNIQUE KEY uniq_users_login_id (login_id),
+			UNIQUE KEY uniq_users_discord_id (discord_id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+		return err
 	}
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS users (

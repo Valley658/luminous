@@ -14,13 +14,19 @@ const CookieName = "pl_session"
 type Store struct {
 	secret       []byte
 	cookieSecure bool
+	cookieDomain string
 	maxAge       time.Duration
 }
 
-func NewStore(secretKey string, cookieSecure bool) *Store {
+// cookieDomain: 로그인 세션 쿠키를 어느 도메인 범위까지 보낼지. 빈 문자열이면
+// 로그인했던 정확한 호스트에만(예: pastellive.co.kr), ".pastellive.co.kr"처럼
+// 앞에 점을 붙인 값이면 admin.pastellive.co.kr 같은 서브도메인까지 전부
+// 공유된다 - config.defaultCookieDomain 참고.
+func NewStore(secretKey string, cookieSecure bool, cookieDomain string) *Store {
 	return &Store{
 		secret:       []byte(secretKey),
 		cookieSecure: cookieSecure,
+		cookieDomain: cookieDomain,
 		maxAge:       30 * 24 * time.Hour,
 	}
 }
@@ -124,11 +130,32 @@ func (st *Store) Save(w http.ResponseWriter, s *Session) {
 		Name:     CookieName,
 		Value:    value,
 		Path:     "/",
+		Domain:   st.cookieDomain,
 		HttpOnly: true,
 		Secure:   st.cookieSecure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(st.maxAge.Seconds()),
 	})
+
+	// [2026-09-22: admin.pastellive.co.kr 로그인 인식 버그를 고치면서 쿠키에
+	// Domain(.pastellive.co.kr)을 새로 지정했는데, 예전엔 Domain 없이(호스트
+	// 전용) 발급했었다 - 브라우저는 이름이 같아도 Domain이 다르면 완전히 별개의
+	// 쿠키로 취급해서 예전 쿠키가 안 지워지고 새 쿠키와 같이 남는다. 그 상태로
+	// 요청을 보내면 서버가 어느 쪽을 먼저 읽을지 보장이 안 되고(브라우저/서버
+	// 구현마다 다름), 실제로 예전의 빈 세션 쿠키를 먼저 읽어서 방금 로그인했는데도
+	// 로그아웃 상태로 보이는 문제가 있었음. Domain을 지정하는 경우엔 예전
+	// 호스트 전용 쿠키를 같이 명시적으로 만료시켜서 브라우저에서 정리한다.]
+	if st.cookieDomain != "" {
+		http.SetCookie(w, &http.Cookie{
+			Name:     CookieName,
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   st.cookieSecure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   -1,
+		})
+	}
 }
 
 func splitOnce(s string, sep byte) []string {
