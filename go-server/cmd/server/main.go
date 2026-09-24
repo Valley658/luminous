@@ -79,6 +79,17 @@ func main() {
 	}
 	defer database.Close()
 
+	// 루미(AI 마스코트) 대화 기록은 사이트 본 DB와 완전히 분리된 자기만의
+	// DB(cfg.LumiDBName, 기본 "lumi_db")에 저장한다.
+	lumiDatabase, err := pdb.OpenLumi(cfg)
+	if err != nil {
+		log.Fatalf("루미 DB 연결 실패: %v", err)
+	}
+	defer lumiDatabase.Close()
+	if err := models.InitLumiChatHistoryTable(lumiDatabase); err != nil {
+		log.Fatalf("루미 DB의 lumi_chat_history 테이블 초기화 실패: %v", err)
+	}
+
 	if err := models.InitUsersTable(database); err != nil {
 		log.Fatalf("users 테이블 초기화 실패: %v", err)
 	}
@@ -108,9 +119,6 @@ func main() {
 	}
 	if err := models.InitAttendanceTable(database); err != nil {
 		log.Fatalf("user_attendance 테이블 초기화 실패: %v", err)
-	}
-	if err := models.InitLumiChatHistoryTable(database); err != nil {
-		log.Fatalf("lumi_chat_history 테이블 초기화 실패: %v", err)
 	}
 	if err := models.InitMemberVideoArchiveTable(database); err != nil {
 		log.Fatalf("member_video_archive 테이블 초기화 실패: %v", err)
@@ -160,7 +168,7 @@ func main() {
 	}
 
 	sessionStore := session.NewStore(cfg.SecretKey, cfg.CookieSecure, cfg.CookieDomain)
-	app := handlers.New(database, cfg, sessionStore)
+	app := handlers.New(database, lumiDatabase, cfg, sessionStore)
 	app.WarmUpLocalAI()
 
 	rateLimiter := plmw.NewRateLimiter(cfg.RateLimitEnabled, cfg.RateLimitWindowSec, cfg.RateLimitMaxRequests, cfg.RateLimitBanMinutes)

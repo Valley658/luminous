@@ -11,8 +11,10 @@ import (
 // the now-deleted Python app - there was never a Go/SQL migration for it).
 // After a from-scratch database this left ~13 tables (and a few extra
 // columns on `users`) missing, breaking attendance, fanart, highlights,
-// kirinuki archive, lumi chat history, notifications, schedules, search
-// trends, watch history/comment likes/playlists and the shorts cache.
+// kirinuki archive, notifications, schedules, search trends, watch
+// history/comment likes/playlists and the shorts cache. (Lumi chat history
+// used to be recovered here too, but as of 2026-09-25 it lives in its own
+// separate database - see InitLumiChatHistoryTable in lumi_chat.go.)
 //
 // This is a one-time recovery shim: it is intentionally verbose/explicit
 // (one CREATE TABLE per feature, mirroring the SQLite definitions in each
@@ -160,14 +162,9 @@ func InitMySQLMissingTables(d *pdb.DB) error {
 	}
 
 	// --- lumi_chat.go: lumi_chat_history ---
-	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS lumi_chat_history (
-		id INT PRIMARY KEY AUTO_INCREMENT,
-		user_id INT NOT NULL,
-		question TEXT NOT NULL,
-		reply TEXT NOT NULL,
-		created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-		INDEX idx_lumi_chat_history_user (user_id, id)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+	// [2026-09-25: 루미 대화 기록은 이제 여기(본 DB)가 아니라 별도의 루미
+	// 전용 DB(pdb.OpenLumi/cfg.LumiDBName)에서 InitLumiChatHistoryTable이
+	// 직접 만든다 - 아래 중복 생성을 지웠다.]
 
 	// --- notifications.go: notifications ---
 	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS notifications (

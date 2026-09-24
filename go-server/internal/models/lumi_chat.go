@@ -8,9 +8,24 @@ import (
 // 저장해뒀다가, 나중에 다시 사이트에 들어왔을 때 그대로 불러와 보여주기 위한
 // 테이블이다. 비로그인 방문자는 user_id가 없어서(세션에만 임시로 1회
 // 카운트만 남음) 저장하지 않는다 - 로그인 사용자만 대상.
+//
+// [2026-09-25: 사이트 본 DB(pastellive_db)와 섞이지 않게, 이 테이블은 이제
+// 별도의 루미 전용 DB(pdb.OpenLumi가 여는 cfg.LumiDBName/LumiSQLitePath)에
+// 산다 - 호출하는 쪽(main.go)이 본 DB가 아니라 그 전용 연결을 넘겨준다.
+// 그래서 예전처럼 "MySQL은 mysql_bootstrap.go가 대신 만들어주니 여기선
+// 건너뛴다"고 할 필요가 없어졌고, 이 함수 하나가 SQLite/MySQL 둘 다 직접
+// 책임진다.]
 func InitLumiChatHistoryTable(d *pdb.DB) error {
 	if d.Backend == "mysql" {
-		return nil
+		_, err := d.Exec(`CREATE TABLE IF NOT EXISTS lumi_chat_history (
+			id INT PRIMARY KEY AUTO_INCREMENT,
+			user_id INT NOT NULL,
+			question TEXT NOT NULL,
+			reply TEXT NOT NULL,
+			created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+			INDEX idx_lumi_chat_history_user (user_id, id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+		return err
 	}
 	if _, err := d.Exec(`CREATE TABLE IF NOT EXISTS lumi_chat_history (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

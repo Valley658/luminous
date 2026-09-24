@@ -19,6 +19,12 @@ type Config struct {
 	MySQLPass  string
 	MySQLName  string
 
+	// 루미(AI 마스코트) 대화 기록 전용 DB - 사이트 본 DB(MySQLName/SQLitePath)와
+	// 완전히 분리된 별도 데이터베이스. 같은 MySQL 서버/계정을 재사용하되 DB
+	// 이름만 다르다(MySQL은 DB 단위로만 분리 가능 - 별도 서버까지는 아님).
+	LumiDBName     string
+	LumiSQLitePath string
+
 	SecretKey string
 
 	DiscordClientID     string
@@ -219,6 +225,9 @@ func Load(projectDir string) *Config {
 		MySQLUser:  getenv("DB_USER", "root"),
 		MySQLPass:  getenv("DB_PASSWORD", ""),
 		MySQLName:  getenv("DB_NAME", "stelive_db"),
+
+		LumiDBName:     getenv("LUMI_DB_NAME", "lumi_db"),
+		LumiSQLitePath: getenv("LUMI_SQLITE_DB_PATH", filepath.Join(dbDir, "lumi_db.db")),
 
 		SecretKey: getenv("SECRET_KEY", ""),
 

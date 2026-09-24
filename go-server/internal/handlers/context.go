@@ -24,6 +24,7 @@ import (
 
 type App struct {
 	DB           *pdb.DB
+	LumiDB       *pdb.DB
 	Cfg          *config.Config
 	SessionStore *session.Store
 	VideoPool    *video.Pool
@@ -43,7 +44,7 @@ type App struct {
 
 const meiliIndexName = "pastellive_search"
 
-func New(db *pdb.DB, cfg *config.Config, store *session.Store) *App {
+func New(db *pdb.DB, lumiDB *pdb.DB, cfg *config.Config, store *session.Store) *App {
 	initDevAccess(cfg)
 	meili := meilisearch.New(cfg.MeilisearchURL, cfg.MeilisearchKey)
 	if meili.Available() {
@@ -53,6 +54,7 @@ func New(db *pdb.DB, cfg *config.Config, store *session.Store) *App {
 	}
 	return &App{
 		DB:                   db,
+		LumiDB:               lumiDB,
 		Cfg:                  cfg,
 		SessionStore:         store,
 		VideoPool:            video.NewPool(),

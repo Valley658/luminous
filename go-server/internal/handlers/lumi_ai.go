@@ -744,7 +744,7 @@ func lumiCreatorDeflectReply(lines []string) map[string]any {
 func (a *App) sendLumiReply(w http.ResponseWriter, userID int64, prompt string, payload map[string]any) {
 	if userID != 0 {
 		if reply, ok := payload["reply"].(string); ok && reply != "" {
-			if err := models.SaveLumiChatMessage(a.DB, userID, prompt, reply); err != nil {
+			if err := models.SaveLumiChatMessage(a.LumiDB, userID, prompt, reply); err != nil {
 				log.Printf("루미 대화 기록 저장 실패(user_id=%d): %v", userID, err)
 			}
 		}
@@ -761,7 +761,7 @@ func (a *App) ApiLumiHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]any{"success": true, "messages": []models.LumiChatMessage{}})
 		return
 	}
-	messages, err := models.ListLumiChatHistory(a.DB, userID, 50)
+	messages, err := models.ListLumiChatHistory(a.LumiDB, userID, 50)
 	if err != nil {
 		log.Printf("루미 대화 기록 조회 실패(user_id=%d): %v", userID, err)
 		httputil.JSONError(w, http.StatusInternalServerError, "대화 기록을 불러오지 못했어.")
@@ -778,7 +778,7 @@ func (a *App) ApiLumiHistoryDeleteHandler(w http.ResponseWriter, r *http.Request
 		httputil.JSONError(w, http.StatusUnauthorized, "로그인이 필요해.")
 		return
 	}
-	if err := models.DeleteLumiChatHistory(a.DB, userID); err != nil {
+	if err := models.DeleteLumiChatHistory(a.LumiDB, userID); err != nil {
 		log.Printf("루미 대화 기록 삭제 실패(user_id=%d): %v", userID, err)
 		httputil.JSONError(w, http.StatusInternalServerError, "대화 기록을 지우지 못했어.")
 		return
