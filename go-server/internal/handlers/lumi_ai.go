@@ -193,12 +193,12 @@ var (
 	// 동사 형태부터 정확한 반말로 바꾸고, 그 외 나머지 "-세요" 전체는
 	// 완벽하진 않아도 존댓말 어미만은 확실히 제거하는 범용 규칙으로 받는다
 	// (위 -습니다 계열과 같은 타협 - 100% 자연스럽진 않아도 존댓말이 새는 것보다 낫다).
-	lumiPoliteJuseyo       = regexp.MustCompile(`주세요([.!?~,\n]|$)`)
-	lumiPoliteHaseyo       = regexp.MustCompile(`하세요([.!?~,\n]|$)`)
-	lumiPoliteMureoboseyo  = regexp.MustCompile(`물어보세요([.!?~,\n]|$)`)
-	lumiPoliteBoseyo       = regexp.MustCompile(`보세요([.!?~,\n]|$)`)
-	lumiPoliteOseyo        = regexp.MustCompile(`오세요([.!?~,\n]|$)`)
-	lumiPoliteGaseyo       = regexp.MustCompile(`가세요([.!?~,\n]|$)`)
+	lumiPoliteJuseyo      = regexp.MustCompile(`주세요([.!?~,\n]|$)`)
+	lumiPoliteHaseyo      = regexp.MustCompile(`하세요([.!?~,\n]|$)`)
+	lumiPoliteMureoboseyo = regexp.MustCompile(`물어보세요([.!?~,\n]|$)`)
+	lumiPoliteBoseyo      = regexp.MustCompile(`보세요([.!?~,\n]|$)`)
+	lumiPoliteOseyo       = regexp.MustCompile(`오세요([.!?~,\n]|$)`)
+	lumiPoliteGaseyo      = regexp.MustCompile(`가세요([.!?~,\n]|$)`)
 	// "받으세요"/"먹으세요"처럼 자음 어간 뒤에 연결모음 "으"가 붙는 형태는
 	// "세요"만 떼면 "받으"처럼 어색하게 남으니, "으세요"째로 같이 떼어낸다.
 	lumiPoliteEuseyoTail  = regexp.MustCompile(`으세요([.!?~,\n]|$)`)
