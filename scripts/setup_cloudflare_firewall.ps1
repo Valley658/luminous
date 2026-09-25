@@ -62,35 +62,73 @@ Write-Host "  IPv4 대역 $($ipv4.Count)개, IPv6 대역 $($ipv6.Count)개 확�
 Write-Host ""
 
 # ---- 2) 기존에 80/443을 열어주는 규칙 찾기 ----------------------------------
-Write-Host "[2/4] 기존 방화벽 규칙 중 80/443 포트에 영향을 주는 것 찾는 중..."
-$existingRules = @()
-foreach ($port in $TargetPorts) {
-    $portFilters = Get-NetFirewallPortFilter -Protocol TCP | Where-Object { $_.LocalPort -eq "$port" -or $_.LocalPort -eq "Any" }
-    foreach ($pf in $portFilters) {
-        $rule = $pf | Get-NetFirewallRule
-        if ($rule.Direction -eq "Inbound" -and $rule.Enabled -eq "True" -and $rule.Name -notlike "$RuleNamePrefix*") {
-            $existingRules += [PSCustomObject]@{ Rule = $rule; Port = $port }
-        }
+# [주의] 처음 버전은 LocalPort -eq "Any"인 규칙까지 전부 끌어모았는데, 그러면
+# RemoteAssistance/RemoteDesktop-Shadow/CDPSvc/WiFiDirect 같은 "포트 상관없이
+# 이 프로그램은 허용"류의 Windows 내장 규칙까지 다 걸려서(첫 dry-run에서
+# 실제로 28개나 나옴 - 원격 지원/원격 데스크톱 섀도잉 관련 규칙 포함!),
+# 그걸 그대로 비활성화했으면 원격 접속에 영향을 줬을 수 있었다. 그래서:
+#   1) "포트 필터가 정확히 80 또는 443"인 규칙만 자동으로 비활성화 대상에 넣고
+#   2) nginx.exe에 연결된 규칙(우리 웹서버 프로그램)은 이름과 무관하게 포함
+#   3) 그 외 "Any 포트"로 잡힌 나머지(원격 지원/데스크톱 관련, 정체 불명 규칙,
+#      python.exe 등)는 절대 자동으로 건드리지 않고 "확인 필요" 목록으로만 보여줌
+$SafetyDenylistPattern = '(?i)RemoteAssistance|RemoteDesktop|CDPSvc|WiFiDirect|Proximity|NETDIS|WirelessDisplay'
+
+$allInboundEnabled = Get-NetFirewallRule -Direction Inbound | Where-Object { $_.Enabled -eq "True" -and $_.Name -notlike "$RuleNamePrefix*" }
+
+Write-Host "[2/4] 기존 방화벽 규칙 중 80/443 포트 또는 nginx.exe에 연결된 것 찾는 중..."
+$toDisable = @()
+$needsReview = @()
+foreach ($rule in $allInboundEnabled) {
+    $portFilter = $rule | Get-NetFirewallPortFilter -ErrorAction SilentlyContinue
+    $appFilter = $rule | Get-NetFirewallApplicationFilter -ErrorAction SilentlyContinue
+    $localPort = if ($portFilter) { "$($portFilter.LocalPort)" } else { "" }
+    $program = if ($appFilter) { "$($appFilter.Program)" } else { "" }
+
+    $isPortMatch = ($localPort -split ",") -contains "80" -or ($localPort -split ",") -contains "443"
+    $isNginx = $program -match '(?i)\\nginx\.exe$'
+    $isDenylisted = $rule.Name -match $SafetyDenylistPattern -or $rule.DisplayName -match $SafetyDenylistPattern
+
+    if ($isDenylisted) {
+        continue  # 원격 지원/데스크톱 등 - 절대 건드리지 않음, 목록에도 안 보여줌
+    }
+    if ($isPortMatch -or $isNginx) {
+        $toDisable += [PSCustomObject]@{ Rule = $rule; Port = $localPort; Program = $program }
+    } elseif ($localPort -eq "Any" -and $program -match '(?i)\\python') {
+        # python.exe가 Any 포트로 인바운드를 열고 있음 - services/nsfw-service 등
+        # 내부용(127.0.0.1) Python 서비스일 가능성이 높지만, 외부에 80/443으로
+        # 노출되는 것과는 무관해 보여서 자동으로 건드리지 않고 확인만 요청.
+        $needsReview += [PSCustomObject]@{ Rule = $rule; Program = $program }
     }
 }
-if ($existingRules.Count -eq 0) {
-    Write-Host "  80/443을 명시적으로 여는 기존 인바운드 규칙을 못 찾았습니다."
-    Write-Host "  (Windows 기본 정책상 인바운드가 기본 차단이면 그동안 어떻게 열려있었는지 직접 확인이 필요합니다 - 공유기 포트포워딩만으로 열려있었을 수도 있음. 이 스크립트는 Windows 방화벽만 다룹니다.)"
+
+if ($toDisable.Count -eq 0) {
+    Write-Host "  80/443 포트 또는 nginx.exe에 명시적으로 연결된 인바운드 규칙을 못 찾았습니다."
 } else {
-    Write-Host "  다음 규칙들이 80/443에 영향을 주고 있습니다 (모두 포트 필터 기준으로만 찾음, 이름과 무관):"
-    foreach ($e in $existingRules) {
-        Write-Host "    - [$($e.Rule.Name)] 포트 $($e.Port), 프로필=$($e.Rule.Profile), 방향=$($e.Rule.Direction)"
+    Write-Host "  다음 규칙들을 비활성화 대상으로 찾았습니다:"
+    foreach ($e in $toDisable) {
+        Write-Host "    - [$($e.Rule.Name)] 포트=$($e.Port) 프로그램=$($e.Program) 프로필=$($e.Rule.Profile)"
     }
+}
+if ($needsReview.Count -gt 0) {
+    Write-Host ""
+    Write-Host "  [확인 필요 - 자동으로 건드리지 않음] 아래 규칙은 포트가 특정 안 돼있어(Any) 직접 확인이 필요합니다:"
+    foreach ($e in $needsReview) {
+        Write-Host "    - [$($e.Rule.Name)] 프로그램=$($e.Program)"
+    }
+    Write-Host "    (예: python.exe가 뭘 하는 프로세스인지 확인해주세요 - services\nsfw-service 같은 내부 전용(127.0.0.1) 서비스라면 애초에 외부 인바운드가 필요 없는 규칙일 수 있습니다.)"
 }
 Write-Host ""
 
 # ---- 3) 계획 요약 ------------------------------------------------------------
 Write-Host "[3/4] 적용할 내용:"
 Write-Host "  - 새 규칙 '$RuleNamePrefix-Allow' 생성: TCP 80,443 인바운드 허용, RemoteAddress = Cloudflare 대역만"
-if ($existingRules.Count -gt 0) {
-    Write-Host "  - 위에서 찾은 기존 규칙 $($existingRules.Count)개를 '비활성화'(삭제 아님)"
+if ($toDisable.Count -gt 0) {
+    Write-Host "  - 위에서 찾은 기존 규칙 $($toDisable.Count)개를 '비활성화'(삭제 아님)"
 }
-Write-Host "  - 80/443 이외의 포트(원격 접속 포함)는 전혀 건드리지 않습니다."
+if ($needsReview.Count -gt 0) {
+    Write-Host "  - [확인 필요] 규칙 $($needsReview.Count)개는 이 스크립트가 건드리지 않습니다(위 목록 참고, 필요하면 직접 확인 후 수동 처리)"
+}
+Write-Host "  - 원격 지원/원격 데스크톱/CDP/WiFi Direct 등 Windows 내장 규칙과 80/443 이외의 포트는 전혀 건드리지 않습니다."
 Write-Host ""
 
 if (-not $Apply) {
@@ -111,7 +149,7 @@ New-NetFirewallRule -DisplayName "$RuleNamePrefix-Allow" `
 
 Write-Host "  Cloudflare 전용 허용 규칙 생성 완료."
 
-foreach ($e in $existingRules) {
+foreach ($e in $toDisable) {
     try {
         Disable-NetFirewallRule -Name $e.Rule.Name -ErrorAction Stop
         Write-Host "  기존 규칙 비활성화: $($e.Rule.Name)"

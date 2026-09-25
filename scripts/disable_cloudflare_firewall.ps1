@@ -17,10 +17,12 @@ Remove-NetFirewallRule -DisplayName "$RuleNamePrefix-Allow" -ErrorAction Silentl
 Write-Host "  '$RuleNamePrefix-Allow' 규칙 제거 완료."
 
 $disabledByUs = Get-NetFirewallRule -Direction Inbound | Where-Object {
-    $_.Enabled -eq "False" -and (
-        (Get-NetFirewallPortFilter -AssociatedNetFirewallRule $_ -ErrorAction SilentlyContinue) |
-        Where-Object { $_.LocalPort -eq "80" -or $_.LocalPort -eq "443" }
-    )
+    if ($_.Enabled -ne "False") { return $false }
+    $pf = $_ | Get-NetFirewallPortFilter -ErrorAction SilentlyContinue
+    $af = $_ | Get-NetFirewallApplicationFilter -ErrorAction SilentlyContinue
+    $localPort = if ($pf) { "$($pf.LocalPort)" } else { "" }
+    $program = if ($af) { "$($af.Program)" } else { "" }
+    (($localPort -split ",") -contains "80") -or (($localPort -split ",") -contains "443") -or ($program -match '(?i)\\nginx\.exe$')
 }
 if ($disabledByUs) {
     Write-Host "다음 규칙들이 비활성화 상태입니다 - 원래 80/443을 열어주던 규칙이라면 다시 켜세요:"
