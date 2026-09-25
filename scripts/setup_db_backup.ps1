@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 $ErrorActionPreference = 'Continue'
 try {
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

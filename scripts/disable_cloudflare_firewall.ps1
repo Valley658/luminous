@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 # setup_cloudflare_firewall.ps1로 만든 제한을 되돌린다: 새로 만든 Cloudflare
 # 전용 허용 규칙을 지우고, 그때 비활성화했던 기존 규칙들을 다시 켠다.
 # (기존 규칙을 "삭제"가 아니라 "비활성화"만 했었기 때문에 이 스크립트로

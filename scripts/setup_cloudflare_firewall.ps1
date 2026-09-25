@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 # ============================================================================
 # [2026-09-25 보안 점검] Origin 직접 접근 차단
 #
