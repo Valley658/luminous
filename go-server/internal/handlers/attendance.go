@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -42,5 +43,15 @@ func (a *App) ApiMarkAttendanceHandler(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]any{"success": false, "message": "이미 오늘 출석을 완료했습니다."})
 		return
 	}
-	writeJSON(w, map[string]any{"success": true, "total": total, "consecutive": consecutive})
+
+	// [참여 유도: 포인트] 출석마다 기본 점수 + 7일 연속 출석 보너스.
+	earnedPoints := models.PointsAttendance
+	if consecutive > 0 && consecutive%7 == 0 {
+		earnedPoints += models.PointsAttendanceWeek
+	}
+	if err := models.AwardPoints(a.DB, userID, "attendance", earnedPoints); err != nil {
+		log.Printf("출석 포인트 적립 실패(user_id=%d): %v", userID, err)
+	}
+
+	writeJSON(w, map[string]any{"success": true, "total": total, "consecutive": consecutive, "points_earned": earnedPoints})
 }

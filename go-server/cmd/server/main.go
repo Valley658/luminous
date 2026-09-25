@@ -93,6 +93,12 @@ func main() {
 	if err := models.InitUsersTable(database); err != nil {
 		log.Fatalf("users 테이블 초기화 실패: %v", err)
 	}
+	if err := models.InitPasswordResetTable(database); err != nil {
+		log.Fatalf("password_reset_tokens 테이블 초기화 실패: %v", err)
+	}
+	if err := models.InitPointsTables(database); err != nil {
+		log.Fatalf("포인트 시스템 테이블 초기화 실패: %v", err)
+	}
 	if err := models.InitHistoryTable(database); err != nil {
 		log.Fatalf("watch_history 테이블 초기화 실패: %v", err)
 	}
@@ -198,6 +204,9 @@ func main() {
 	r.Get("/login/discord", app.DiscordLoginStart)
 	r.Get("/login/discord/callback", app.DiscordLoginCallback)
 	r.Post("/api/account/set-password", app.ApiSetPasswordHandler)
+	r.With(authRateLimiter.Middleware).Post("/api/account/forgot-password", app.ApiForgotPasswordHandler)
+	r.With(authRateLimiter.Middleware).Post("/api/account/reset-password", app.ApiResetPasswordHandler)
+	r.Get("/reset-password", app.ResetPasswordPageHandler)
 	r.Post("/api/me/profile", app.ApiUpdateProfileHandler)
 	r.Post("/api/me/email", app.ApiUpdateEmailHandler)
 	r.Post("/api/me/nickname", app.ApiUpdateNicknameHandler)
@@ -265,6 +274,9 @@ func main() {
 	r.Get("/api/attendance/status", app.ApiAttendanceStatusHandler)
 	r.Post("/api/attendance/mark", app.ApiMarkAttendanceHandler)
 
+	r.Get("/api/leaderboard", app.ApiLeaderboardHandler)
+	r.Get("/api/points/my", app.ApiMyPointsHandler)
+
 	r.Get("/profile", app.ProfilePageHandler)
 	r.Get("/api/profile/my_videos", app.ApiProfileMyVideosHandler)
 	r.Get("/api/profile/liked_videos", app.ApiProfileLikedVideosHandler)
@@ -299,6 +311,7 @@ func main() {
 
 	r.Get("/api/notifications", app.ApiGetNotificationsHandler)
 	r.Post("/api/notifications/read", app.ApiMarkNotificationsReadHandler)
+	r.Get("/api/notifications/stream", app.ApiNotificationsStreamHandler)
 
 	r.Get("/api/quiz/questions", app.ApiQuizQuestionsHandler)
 	r.Post("/api/quiz/check", app.ApiQuizCheckHandler)

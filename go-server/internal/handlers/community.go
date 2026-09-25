@@ -240,6 +240,12 @@ func (a *App) CreateCommunityPostHandler(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, map[string]any{"success": false, "message": "글 작성 중 오류가 발생했습니다."})
 		return
 	}
+
+	// [참여 유도: 포인트] 커뮤니티 글 작성 시 포인트 적립.
+	if err := models.AwardPoints(a.DB, userID, "community_post", models.PointsCommunityPost); err != nil {
+		log.Printf("커뮤니티 글 작성 포인트 적립 실패(user_id=%d): %v", userID, err)
+	}
+
 	writeJSON(w, map[string]any{"success": true, "message": "게시물이 작성되었습니다."})
 }
 
@@ -328,7 +334,7 @@ func (a *App) ApiCommunityLikeHandler(w http.ResponseWriter, r *http.Request) {
 			if u, uerr := models.GetUserByID(a.DB, userID); uerr == nil && u != nil {
 				nickname = u.NicknameOr("스텔리언")
 			}
-			_ = models.CreateNotification(a.DB, ownerID, userID, nickname, "like_on_post", "post", targetIDInt, "")
+			_ = a.CreateNotify(ownerID, userID, nickname, "like_on_post", "post", targetIDInt, "")
 		}
 	}
 	var myReactionOut any
@@ -410,9 +416,15 @@ func (a *App) ApiAddCommunityCommentHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if ownerID, found, oerr := models.GetCommunityPostOwner(a.DB, postID); oerr == nil && found {
-		_ = models.CreateNotification(a.DB, ownerID, userID, user.NicknameOr("스텔리언"),
+		_ = a.CreateNotify(ownerID, userID, user.NicknameOr("스텔리언"),
 			"comment_on_post", "post", postID, content)
 	}
+
+	// [참여 유도: 포인트] 커뮤니티 댓글 작성 시 포인트 적립.
+	if err := models.AwardPoints(a.DB, userID, "comment", models.PointsComment); err != nil {
+		log.Printf("커뮤니티 댓글 포인트 적립 실패(user_id=%d): %v", userID, err)
+	}
+
 	writeJSON(w, map[string]any{"success": true, "id": newID, "message": "댓글이 등록되었습니다."})
 }
 

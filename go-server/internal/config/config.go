@@ -82,6 +82,16 @@ type Config struct {
 
 	AdminDriveAllowedEmail string
 
+	// 비밀번호 찾기(재설정) 메일 발송용 SMTP 설정. SMTPHost가 비어있으면
+	// 이메일 기능 자체가 꺼진 채로 동작한다(internal/email.New가 nil을 돌려줌) -
+	// 리도님이 아직 SMTP를 안 붙여도 서버가 죽지 않음.
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPass     string
+	SMTPFrom     string
+	SMTPFromName string
+
 	MeilisearchURL string
 	MeilisearchKey string
 
@@ -308,6 +318,13 @@ func Load(projectDir string) *Config {
 		AuthRateLimitBanMinutes:  getenvInt("AUTH_RATE_LIMIT_BAN_MINUTES", 20),
 
 		AdminDriveAllowedEmail: getenv("ADMIN_DRIVE_ALLOWED_EMAIL", ""),
+
+		SMTPHost:     getenv("SMTP_HOST", ""),
+		SMTPPort:     getenvInt("SMTP_PORT", 587),
+		SMTPUser:     getenv("SMTP_USER", ""),
+		SMTPPass:     getenv("SMTP_PASSWORD", ""),
+		SMTPFrom:     getenv("SMTP_FROM", ""),
+		SMTPFromName: getenv("SMTP_FROM_NAME", "루미너스"),
 
 		MeilisearchURL: getenv("MEILISEARCH_URL", "http://127.0.0.1:7700"),
 		MeilisearchKey: getenv("MEILISEARCH_KEY", ""),

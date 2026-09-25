@@ -174,6 +174,18 @@ func GetUserByDiscordID(d *pdb.DB, discordID string) (*User, error) {
 	return u, err
 }
 
+// GetUserByEmail은 비밀번호 찾기(재설정)에서 이메일로 계정을 찾을 때 쓴다.
+// 이메일은 유니크 제약이 없어서(회원가입은 아이디 기준) 같은 이메일로 여러
+// 계정이 있을 수도 있지만 실무상 드무니 첫 번째로 찾은 계정을 쓴다.
+func GetUserByEmail(d *pdb.DB, email string) (*User, error) {
+	row := d.QueryRow("SELECT "+userCols+" FROM users WHERE email = ? LIMIT 1", email)
+	u, err := scanUser(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return u, err
+}
+
 func CreateUser(d *pdb.DB, loginID, passwordHash, nickname, lastIP string) (int64, error) {
 	res, err := d.Exec(
 		"INSERT INTO users (login_id, password_hash, nickname, last_ip) VALUES (?, ?, ?, ?)",
@@ -197,6 +209,13 @@ func UpdateLastIPAndPasswordHash(d *pdb.DB, userID int64, ip, hash string) error
 
 func UpdateLoginCredentials(d *pdb.DB, userID int64, loginID, passwordHash, nickname string) error {
 	_, err := d.Exec("UPDATE users SET login_id=?, password_hash=?, nickname=? WHERE id=?", loginID, passwordHash, nickname, userID)
+	return err
+}
+
+// UpdatePasswordHash는 비밀번호 재설정(forgot-password)에서만 쓴다 - 아이디나
+// 닉네임은 안 건드리고 비밀번호만 바꾼다.
+func UpdatePasswordHash(d *pdb.DB, userID int64, passwordHash string) error {
+	_, err := d.Exec("UPDATE users SET password_hash=? WHERE id=?", passwordHash, userID)
 	return err
 }
 

@@ -65,7 +65,7 @@ func (a *App) ApiReactToCommentHandler(w http.ResponseWriter, r *http.Request) {
 					nickname = n
 				}
 			}
-			_ = models.CreateNotification(a.DB, ownerID, userID, nickname, "like_on_comment", "comment", commentID, "")
+			_ = a.CreateNotify(ownerID, userID, nickname, "like_on_comment", "comment", commentID, "")
 		}
 	}
 	var myReactionOut any
@@ -210,5 +210,11 @@ func (a *App) ApiAddCommentHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[정보] 댓글 GIF 변환 큐가 가득 참 - comment_id=%d는 원본 gif 유지", id)
 		}
 	}
+
+	// [참여 유도: 포인트] 영상 댓글 작성 시 포인트 적립.
+	if err := models.AwardPoints(a.DB, userID, "comment", models.PointsComment); err != nil {
+		log.Printf("영상 댓글 포인트 적립 실패(user_id=%d): %v", userID, err)
+	}
+
 	writeJSON(w, map[string]any{"success": true, "message": "등록 완료"})
 }

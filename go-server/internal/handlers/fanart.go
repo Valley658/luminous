@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -113,6 +114,14 @@ func (a *App) ApiUploadFanartHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	a.checkFanartDuplicate(fanartID, filePath, title, imageURL, nickname)
 	a.Cache.Delete("api_fanart_latest")
+
+	// [참여 유도: 포인트] AI 모더레이션이 "의심"으로 플래그한 건 검토 전이라
+	// 포인트를 바로 안 주고, 문제없는 정상 업로드에만 준다.
+	if modResult.Verdict != "flag" {
+		if err := models.AwardPoints(a.DB, userID, "fanart_upload", models.PointsFanartUpload); err != nil {
+			log.Printf("팬아트 업로드 포인트 적립 실패(user_id=%d): %v", userID, err)
+		}
+	}
 	writeJSON(w, map[string]any{"success": true, "message": "업로드 성공!"})
 }
 
@@ -334,7 +343,7 @@ func (a *App) ApiReactFanartHandler(w http.ResponseWriter, r *http.Request) {
 			if nickname == "" {
 				nickname = "스텔리언"
 			}
-			_ = models.CreateNotification(a.DB, ownerID, userID, nickname, "like_on_fanart", "fanart", fanartID, "")
+			_ = a.CreateNotify(ownerID, userID, nickname, "like_on_fanart", "fanart", fanartID, "")
 		}
 	}
 	if body.Reaction == "report" {
@@ -434,9 +443,15 @@ func (a *App) ApiAddFanartCommentHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if ownerID, found, oerr := models.GetFanartOwner(a.DB, fanartID); oerr == nil && found {
-		_ = models.CreateNotification(a.DB, ownerID, userID, user.NicknameOr("스텔리언"),
+		_ = a.CreateNotify(ownerID, userID, user.NicknameOr("스텔리언"),
 			"comment_on_fanart", "fanart", fanartID, content)
 	}
+
+	// [참여 유도: 포인트] 팬아트 댓글 작성 시 포인트 적립.
+	if err := models.AwardPoints(a.DB, userID, "comment", models.PointsComment); err != nil {
+		log.Printf("팬아트 댓글 포인트 적립 실패(user_id=%d): %v", userID, err)
+	}
+
 	writeJSON(w, map[string]any{"success": true, "id": newID, "message": "댓글이 등록되었습니다."})
 }
 

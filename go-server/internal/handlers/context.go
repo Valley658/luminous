@@ -9,6 +9,7 @@ import (
 	"pastellive/internal/config"
 	"pastellive/internal/data"
 	pdb "pastellive/internal/db"
+	"pastellive/internal/email"
 	"pastellive/internal/gotemplates"
 	"pastellive/internal/javaimage"
 	"pastellive/internal/localai"
@@ -17,6 +18,7 @@ import (
 	"pastellive/internal/middleware"
 	"pastellive/internal/moderation"
 	"pastellive/internal/phash"
+	"pastellive/internal/realtime"
 	"pastellive/internal/session"
 	"pastellive/internal/video"
 	"pastellive/internal/websearch"
@@ -38,6 +40,8 @@ type App struct {
 	LocalAI      *localai.Client
 	WebSearch    *websearch.Client
 	MemberID     *memberid.Client
+	Email        *email.Client
+	Notify       *realtime.Hub
 
 	GenRepImageOverrides map[string]string
 }
@@ -67,6 +71,8 @@ func New(db *pdb.DB, lumiDB *pdb.DB, cfg *config.Config, store *session.Store) *
 		LocalAI:              localai.New(cfg.OllamaURL, cfg.OllamaModel, cfg.OllamaTimeout, cfg.OllamaNumPredict),
 		WebSearch:            websearch.New(cfg.WebSearchEnabled, cfg.WebSearchTimeout),
 		MemberID:             memberid.New(cfg.MemberIDServiceURL, cfg.MemberIDServiceTimeout),
+		Email:                email.New(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.SMTPFromName),
+		Notify:               realtime.NewHub(),
 		GenRepImageOverrides: data.BuildGenerationRepImageOverrides(cfg.StaticDir),
 	}
 }
