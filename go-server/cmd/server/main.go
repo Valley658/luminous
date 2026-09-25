@@ -99,6 +99,12 @@ func main() {
 	if err := models.InitPointsTables(database); err != nil {
 		log.Fatalf("포인트 시스템 테이블 초기화 실패: %v", err)
 	}
+	if err := models.InitReportFlagsTable(database); err != nil {
+		log.Fatalf("반복 신고 플래그 테이블 초기화 실패: %v", err)
+	}
+	if err := models.InitEmailDigestColumn(database); err != nil {
+		log.Fatalf("이메일 다이제스트 컬럼 초기화 실패: %v", err)
+	}
 	if err := models.InitHistoryTable(database); err != nil {
 		log.Fatalf("watch_history 테이블 초기화 실패: %v", err)
 	}
@@ -207,6 +213,7 @@ func main() {
 	r.With(authRateLimiter.Middleware).Post("/api/account/forgot-password", app.ApiForgotPasswordHandler)
 	r.With(authRateLimiter.Middleware).Post("/api/account/reset-password", app.ApiResetPasswordHandler)
 	r.Get("/reset-password", app.ResetPasswordPageHandler)
+	r.Get("/email-digest/unsubscribe", app.ApiEmailDigestUnsubscribeHandler)
 	r.Post("/api/me/profile", app.ApiUpdateProfileHandler)
 	r.Post("/api/me/email", app.ApiUpdateEmailHandler)
 	r.Post("/api/me/nickname", app.ApiUpdateNicknameHandler)
@@ -273,6 +280,7 @@ func main() {
 
 	r.Get("/api/attendance/status", app.ApiAttendanceStatusHandler)
 	r.Post("/api/attendance/mark", app.ApiMarkAttendanceHandler)
+	r.Get("/api/attendance/calendar", app.ApiAttendanceCalendarHandler)
 
 	r.Get("/api/leaderboard", app.ApiLeaderboardHandler)
 	r.Get("/api/points/my", app.ApiMyPointsHandler)
@@ -352,6 +360,8 @@ func main() {
 	r.Get("/reports", app.ReportsPageHandler)
 	r.Get("/api/reports", app.ApiGetReportsHandler)
 	r.Post("/api/reports/{reportID}/resolve", app.ApiResolveReportHandler)
+	r.Get("/api/admin/report-flags", app.ApiGetReportFlagsHandler)
+	r.Post("/api/admin/report-flags/{targetUserID}/resolve", app.ApiResolveReportFlagHandler)
 
 	r.Post("/api/inquiries", app.ApiSubmitInquiryHandler)
 	r.Get("/api/admin/inquiries", app.ApiListInquiriesHandler)

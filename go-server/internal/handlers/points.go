@@ -8,6 +8,8 @@ import (
 )
 
 // ApiLeaderboardHandler는 포인트 상위 랭킹을 돌려준다. 누구나(비로그인도) 볼 수 있다.
+// ?period=week 나 ?period=month를 주면 이번 주/이번 달 동안 쌓인 포인트만으로
+// 랭킹을 매긴다(생략하면 전체 누적 랭킹).
 func (a *App) ApiLeaderboardHandler(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	if v := r.URL.Query().Get("limit"); v != "" {
@@ -15,12 +17,13 @@ func (a *App) ApiLeaderboardHandler(w http.ResponseWriter, r *http.Request) {
 			limit = n
 		}
 	}
-	entries, err := models.GetLeaderboard(a.DB, limit)
+	period := r.URL.Query().Get("period")
+	entries, err := models.GetLeaderboardByPeriod(a.DB, period, limit)
 	if err != nil {
 		writeJSON(w, map[string]any{"success": false, "leaderboard": []any{}})
 		return
 	}
-	writeJSON(w, map[string]any{"success": true, "leaderboard": entries})
+	writeJSON(w, map[string]any{"success": true, "leaderboard": entries, "period": period})
 }
 
 // ApiMyPointsHandler는 로그인한 사용자 본인의 포인트/뱃지/순위를 돌려준다.

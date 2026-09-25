@@ -358,11 +358,31 @@ func (a *App) ApiReactFanartHandler(w http.ResponseWriter, r *http.Request) {
 		_ = models.InsertFanartReport(a.DB, fanartID, userID, myNickname, reason, meta, httputil.GetClientIP(r))
 		cnt, err := models.CountFanartReports(a.DB, fanartID)
 		if err == nil && cnt >= 3 {
+			// 삭제하기 전에 작성자를 먼저 알아둬야 함 - 지우고 나면 fanart_gallery
+			// 행이 없어져서 GetFanartOwner로 더 이상 찾을 수 없음.
+			ownerID, ownerFound, _ := models.GetFanartOwner(a.DB, fanartID)
 			if imageURL, found, err := models.FanartImageURL(a.DB, fanartID); err == nil && found {
 				a.deleteFanartImageFiles(imageURL)
 			}
 			_ = models.DeleteFanartFully(a.DB, fanartID)
 			_ = models.MarkFanartReportsAutoDeleted(a.DB, fanartID)
+
+			// [신고 처리 자동화] 이 작성자가 신고로 삭제당한 게 이번이 처음이
+			// 아니면(반복), 관리자가 검토할 수 있게 계정을 자동 플래그한다.
+			// 계정 정지 등 실제 조치는 하지 않고 표시만 함 - 오신고 가능성 때문에
+			// 최종 판단은 항상 관리자가 함.
+			if ownerFound && ownerID != 0 {
+				authorName := meta.Nickname.String
+				if authorName == "" {
+					authorName = myNickname
+				}
+				strikeCount, justFlagged, ferr := models.IncrementUserReportStrike(a.DB, ownerID, authorName, "게시물이 신고로 자동삭제됨: "+reason)
+				if ferr != nil {
+					log.Printf("반복 신고 플래그 기록 실패(user_id=%d): %v", ownerID, ferr)
+				} else if justFlagged {
+					log.Printf("[신고 처리 자동화] 반복 신고 감지 - user_id=%d(%s) 누적 %d회, 관리자 검토 필요", ownerID, authorName, strikeCount)
+				}
+			}
 		}
 	}
 	a.Cache.Delete("api_fanart_latest")

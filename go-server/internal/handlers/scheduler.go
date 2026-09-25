@@ -90,8 +90,9 @@ func (a *App) StartBackgroundScheduler() {
 	})
 	runDailyAt(23, 10, a.runWebpBackfillJob)
 	runDailyAt(23, 35, a.cleanupOrphanFanartImages)
+	runDailyAt(9, 0, a.runWeeklyDigestJob)
 
-	log.Printf("백그라운드 스케줄러 시작됨: 영상 풀 자동 갱신(30분 간격) 등 %d개 주기 작업 등록", 11)
+	log.Printf("백그라운드 스케줄러 시작됨: 영상 풀 자동 갱신(30분 간격) 등 %d개 주기 작업 등록", 12)
 }
 
 func (a *App) refreshAndBroadcastLiveStatus() {

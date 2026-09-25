@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"time"
 
 	pdb "pastellive/internal/db"
 )
@@ -132,6 +133,63 @@ func GetLeaderboard(d *pdb.DB, limit int) ([]LeaderboardEntry, error) {
 		 WHERE p.points > 0
 		 ORDER BY p.points DESC, p.user_id ASC
 		 LIMIT ?`, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []LeaderboardEntry
+	rank := 0
+	for rows.Next() {
+		rank++
+		var e LeaderboardEntry
+		if err := rows.Scan(&e.UserID, &e.Nickname, &e.Picture, &e.Points); err != nil {
+			return nil, err
+		}
+		e.Rank = rank
+		e.Badge = BadgeForPoints(e.Points)
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// periodStartKST는 "week"(이번 주 월요일 0시, KST)나 "month"(이번 달 1일 0시,
+// KST) 기준 시작 시각을 돌려준다. period가 그 외 값이면 zero time과 false.
+func periodStartKST(period string) (time.Time, bool) {
+	now := time.Now().In(KST)
+	switch period {
+	case "week":
+		// Go의 Weekday()는 일요일=0이라, 월요일 시작 주로 바꿔줌.
+		offset := (int(now.Weekday()) + 6) % 7
+		start := now.AddDate(0, 0, -offset)
+		return time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, KST), true
+	case "month":
+		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, KST), true
+	default:
+		return time.Time{}, false
+	}
+}
+
+// GetLeaderboardByPeriod는 "week"(이번 주 월요일부터) 또는 "month"(이번 달
+// 1일부터) 동안 points_log에 쌓인 포인트 합계로 랭킹을 매긴다. period가
+// "week"/"month"가 아니면 GetLeaderboard(전체 누적)와 동일하게 동작한다.
+func GetLeaderboardByPeriod(d *pdb.DB, period string, limit int) ([]LeaderboardEntry, error) {
+	start, ok := periodStartKST(period)
+	if !ok {
+		return GetLeaderboard(d, limit)
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	rows, err := d.Query(
+		`SELECT u.id, COALESCE(u.nickname, ''), COALESCE(u.picture, ''), SUM(l.points) as pts
+		 FROM points_log l JOIN users u ON u.id = l.user_id
+		 WHERE l.created_at >= ?
+		 GROUP BY u.id, u.nickname, u.picture
+		 HAVING SUM(l.points) > 0
+		 ORDER BY pts DESC, u.id ASC
+		 LIMIT ?`, start.Format("2006-01-02 15:04:05"), limit,
 	)
 	if err != nil {
 		return nil, err

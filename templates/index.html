@@ -563,6 +563,39 @@
             font-size: 14px; padding: 10px 12px; border-radius: 6px; cursor: pointer; text-align: left;
         }
         .pl-create-dropdown button:hover { background-color:var(--border-strong3); }
+        .pl-notif-wrap { position: relative; }
+        .pl-notif-btn {
+            position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+            background-color:var(--border-soft2); color:var(--text-primary); border: none; border-radius: 50%; font-size: 16px; cursor: pointer;
+        }
+        .pl-notif-btn:hover { background-color:var(--border-strong3); }
+        .pl-notif-badge {
+            position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; background: #f43f5e; color: #fff;
+            font-size: 10px; font-weight: bold; border-radius: 999px; display: flex; align-items: center; justify-content: center; line-height: 1;
+        }
+        .pl-notif-dropdown {
+            display: none; position: absolute; top: calc(100% + 8px); right: 0; background-color:var(--bg-elevated); border:1px solid var(--border-strong2);
+            border-radius: 10px; width: 320px; max-width: 88vw; max-height: 420px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.5); z-index: 10002;
+            display: none; flex-direction: column;
+        }
+        .pl-notif-dropdown.open { display: flex; }
+        .pl-notif-dropdown-header {
+            display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border);
+            font-size: 14px; font-weight: bold; color:var(--text-primary);
+        }
+        .pl-notif-dropdown-header button {
+            background: none; border: none; color:var(--accent, #38bdf8); font-size: 12px; font-weight: bold; cursor: pointer; padding: 4px 6px;
+        }
+        .pl-notif-list { overflow-y: auto; }
+        .pl-notif-item {
+            display: block; width: 100%; text-align: left; padding: 10px 14px; border: none; background: none; cursor: pointer;
+            border-bottom: 1px solid var(--border); font-size: 13px; color:var(--text-primary); line-height: 1.5;
+        }
+        .pl-notif-item:hover { background-color:var(--border-soft2); }
+        .pl-notif-item.unread { background-color: rgba(56, 189, 248, 0.08); }
+        .pl-notif-item .pl-notif-preview { color:var(--text-secondary, #999); font-size: 12px; margin-top: 2px; display: block; }
+        .pl-notif-item .pl-notif-date { color:var(--text-secondary, #999); font-size: 11px; margin-top: 4px; display: block; }
+        .pl-notif-empty { padding: 28px 14px; text-align: center; color:var(--text-secondary, #999); font-size: 13px; }
         .pl-kirinuki-btn {
             display: flex; align-items: center; gap: 8px; background-color:var(--border-soft2); color:var(--text-primary); border: none;
             border-radius: 18px; padding: 8px 16px 8px 12px; font-size: 14px; font-weight: bold; cursor: pointer;
@@ -898,8 +931,21 @@
             </div>
 
             <div class="pl-header-actions" id="headerActions">
-                
-                
+
+
+                <div class="pl-notif-wrap" id="notifWrap" style="display:none;">
+                    <button class="pl-notif-btn" id="notifBellBtn" title="알림" aria-label="알림">
+                        <i class="fas fa-bell"></i>
+                        <span class="pl-notif-badge" id="notifBadge" style="display:none;">0</span>
+                    </button>
+                    <div class="pl-notif-dropdown" id="notifDropdown">
+                        <div class="pl-notif-dropdown-header">
+                            <span>알림</span>
+                            <button id="notifMarkAllBtn">모두 읽음</button>
+                        </div>
+                        <div class="pl-notif-list" id="notifList"></div>
+                    </div>
+                </div>
                 <div class="pl-create-wrap">
                     <button class="pl-create-btn" id="createBtn" onclick="event.stopPropagation(); toggleCreateMenu();"><i class="fas fa-plus"></i><span>만들기</span></button>
                     <div class="pl-create-dropdown" id="createDropdown">
@@ -2438,6 +2484,7 @@ function smoothScrollTrackBy(el, distance, duration) {
     </script>
 
     <script src="{{ versioned_static('js/script.js') }}" defer></script>
+    <script src="{{ versioned_static('js/notifications.js') }}" defer></script>
     <script src="{{ versioned_static('js/imagepreview.js') }}" defer></script>
     <script>if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

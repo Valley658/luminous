@@ -47,6 +47,34 @@ func HasAttendedToday(d *pdb.DB, userID int64, today string) (bool, error) {
 	return true, nil
 }
 
+// GetAttendanceDatesInMonth는 지정한 연/월(KST 기준)에 사용자가 출석한
+// 날짜들을 "YYYY-MM-DD" 문자열 목록으로 돌려준다(마이페이지 출석 캘린더용).
+func GetAttendanceDatesInMonth(d *pdb.DB, userID int64, year, month int) ([]string, error) {
+	start := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, KST)
+	end := start.AddDate(0, 1, 0)
+	rows, err := d.Query(
+		"SELECT attendance_date FROM user_attendance WHERE user_id = ? AND attendance_date >= ? AND attendance_date < ? ORDER BY attendance_date ASC",
+		userID, start.Format("2006-01-02"), end.Format("2006-01-02"),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]string, 0)
+	for rows.Next() {
+		var dateStr string
+		if err := rows.Scan(&dateStr); err != nil {
+			return nil, err
+		}
+		if len(dateStr) > 10 {
+			dateStr = dateStr[:10]
+		}
+		out = append(out, dateStr)
+	}
+	return out, rows.Err()
+}
+
 func MarkAttendance(d *pdb.DB, userID int64, today, yesterday, ip string) (total, consecutive int64, alreadyDone bool, err error) {
 	done, err := HasAttendedToday(d, userID, today)
 	if err != nil {
