@@ -17,6 +17,19 @@ http {
 
     proxy_connect_timeout 1s;
 
+    # [2026-09-25 보안 점검] Cloudflare Origin CA 인증서로 Cloudflare<->Origin
+    # 구간(SSL/TLS 모드: 전체/Full)을 HTTPS로 암호화. TLS 1.0/1.1은 아예
+    # 제외하고, TLS 1.2는 AEAD(GCM/ChaCha20) 암호만 허용해 CBC 계열
+    # (LUCKY13 등 취약점 대상)을 제거했다. TLS 1.3은 프로토콜 자체가
+    # AEAD 암호만 쓰므로 별도 지정 불필요.
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_certificate     C:/nginx/certs/pastellive_origin.pem;
+    ssl_certificate_key C:/nginx/certs/pastellive_origin.key;
+
     log_format timing '$remote_addr - [$time_local] "$request" $status '
                        'rt=$request_time uct=$upstream_connect_time urt=$upstream_response_time '
                        'upstream=$upstream_addr';
@@ -77,12 +90,14 @@ http {
     # 대역에서 오는 연결만 허용하도록 제한해야 한다(scripts\setup_cloudflare_firewall.ps1 참고).
     server {
         listen       80 default_server;
+        listen       443 ssl default_server;
         server_name  _;
         return 444;
     }
 
     server {
         listen       80;
+        listen       443 ssl;
         server_name  localhost pastellive.co.kr www.pastellive.co.kr m.pastellive.co.kr;
 
         # [2026-09-25 보안 점검] 기본 보안 헤더. 사이트가 쓰는 외부 리소스
@@ -199,6 +214,7 @@ http {
 
     server {
         listen       80;
+        listen       443 ssl;
         server_name  admin.pastellive.co.kr;
 
         add_header X-Content-Type-Options "nosniff" always;
@@ -233,6 +249,7 @@ http {
 
     server {
         listen       80;
+        listen       443 ssl;
         server_name  api.pastellive.co.kr;
 
         add_header X-Content-Type-Options "nosniff" always;
@@ -267,6 +284,7 @@ http {
 
     server {
         listen       80;
+        listen       443 ssl;
         server_name  restore.pastellive.co.kr;
 
         location / {
@@ -281,6 +299,7 @@ http {
 
     server {
         listen       80;
+        listen       443 ssl;
         server_name  world.pastellive.co.kr;
 
         add_header X-Content-Type-Options "nosniff" always;
