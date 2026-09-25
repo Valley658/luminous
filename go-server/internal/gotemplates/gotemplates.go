@@ -38,6 +38,27 @@ type Engine struct {
 	cache map[string]*exec.Template
 }
 
+// [2026-09-25 보안 점검 - Critical] gonja(Jinja2 스타일 템플릿 엔진)의
+// 기본값은 AutoEscape=false다(config.New() 참고) - 즉 지금까지 {{ user.nickname }}
+// 같은 템플릿 변수는 HTML 이스케이프 없이 그대로 출력되고 있었다. 닉네임은
+// 사용자가 직접 20자 이내로 자유롭게 정할 수 있고(길이 제한 외에 HTML 문자
+// 제한이 없음) profile.html의 <h2>{{ user.nickname }}</h2> 등에 그대로
+// 렌더링되므로, 닉네임에 <script>...</script>나 <img onerror=...> 를 넣으면
+// 그 프로필 페이지를 보는 모든 사람(관리자 포함)에게 그대로 실행되는 저장형
+// XSS가 가능했다.
+//
+// 여기서 AutoEscape를 켜서 모든 {{ }} 출력을 기본적으로 HTML 이스케이프
+// 하도록 고쳤다. tojson/versioned_static 필터는 gonja 내부적으로 exec.AsSafeValue로
+// 결과를 감싸서 자동이스케이프를 우회하도록 이미 구현돼 있어(Jinja2의 |safe와
+// 동일한 방식) 안전하게 그대로 동작한다 - 실제로 템플릿 전체에서 |safe 필터를
+// 쓰는 곳도 없었으므로 이 변경으로 깨지는 기존 화면은 없어야 한다.
+// gonja.FromFile()이 내부적으로 패키지 전역 변수 gonja.DefaultConfig를 그대로
+// 쓰기 때문에, 서버 시작 시(첫 템플릿 컴파일 전에) 한 번만 켜주면 전체
+// 템플릿에 적용된다.
+func init() {
+	gonja.DefaultConfig.AutoEscape = true
+}
+
 func New(templatesDir, staticDir, siteHost string) *Engine {
 	return &Engine{
 		dir:        templatesDir,

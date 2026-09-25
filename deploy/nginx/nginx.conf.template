@@ -63,9 +63,41 @@ http {
         "~*^.*image/avif.*:(?<pfx>/static/.+)\.webp$" "${pfx}.avif";
     }
 
+    # [2026-09-25 보안 점검] server_name이 일치하는 블록이 없는 요청을 위한
+    # 명시적 기본 서버. 이게 없으면 nginx는 "이 conf 파일에서 가장 먼저 나오는
+    # server 블록"(바로 아래 pastellive.co.kr 블록)을 기본값으로 써서, 아무
+    # Host 헤더로나(엉뚱한 도메인, IP 직접 접근 등) 실제 서비스가 그대로
+    # 응답해버린다. 이 블록을 먼저 두고 default_server로 지정해서 그런
+    # 요청은 즉시 연결을 끊게 한다.
+    #
+    # 주의: 이것만으로는 "Cloudflare를 거치지 않고 Origin IP:80/443에 직접
+    # Host: pastellive.co.kr 로 접근하는" 우회를 막지 못한다(Host를 정확히
+    # 맞춰서 보내면 그대로 아래 실제 서버 블록에 도달함). 그건 이 conf 파일
+    # 로는 원천적으로 막을 수 없고, OS 방화벽에서 80/443을 Cloudflare IP
+    # 대역에서 오는 연결만 허용하도록 제한해야 한다(scripts\setup_cloudflare_firewall.ps1 참고).
+    server {
+        listen       80 default_server;
+        server_name  _;
+        return 444;
+    }
+
     server {
         listen       80;
         server_name  localhost pastellive.co.kr www.pastellive.co.kr m.pastellive.co.kr;
+
+        # [2026-09-25 보안 점검] 기본 보안 헤더. 사이트가 쓰는 외부 리소스
+        # (YouTube 임베드, cdnjs/jsdelivr 스크립트·폰트, 구글/그라바타 이미지
+        # 등)를 깨뜨리지 않는 선에서 우선 넣을 수 있는 것들만 강제 적용했고,
+        # CSP는 아직 강제하지 않고 Report-Only로만 켜뒀다(/api/csp-report로
+        # 위반 로그가 쌓이니, 몇 주 지켜보고 문제 없으면 Content-Security-Policy로
+        # 바꿔서 강제 적용하면 됨). COOP/CORP/COEP는 디스코드 로그인, 구글
+        # 드라이브 미리보기 iframe, 외부 이미지 등과 충돌 가능성을 확인 못 해서
+        # 이번엔 넣지 않음 - 필요하면 직접 테스트 후 추가할 것.
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()" always;
+        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.youtube.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https://i.ytimg.com https://encrypted-tbn0.gstatic.com https://lh3.googleusercontent.com https://www.gravatar.com; media-src 'self' blob:; frame-src 'self' https://www.youtube.com https://drive.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri /api/csp-report;" always;
 
         access_log  C:/nginx/logs/timing.log  timing;
 
@@ -169,6 +201,11 @@ http {
         listen       80;
         server_name  admin.pastellive.co.kr;
 
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()" always;
+
         proxy_read_timeout 60s;
         proxy_send_timeout 60s;
 
@@ -197,6 +234,11 @@ http {
     server {
         listen       80;
         server_name  api.pastellive.co.kr;
+
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()" always;
 
         proxy_read_timeout 30s;
         proxy_send_timeout 30s;
@@ -240,6 +282,11 @@ http {
     server {
         listen       80;
         server_name  world.pastellive.co.kr;
+
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()" always;
 
         client_max_body_size 130M;
         proxy_read_timeout 300s;

@@ -176,12 +176,16 @@ func (a *App) CreateCommunityPostHandler(w http.ResponseWriter, r *http.Request)
 		userID = sess.GetInt64("user_id")
 	}
 	if userID == 0 {
-		writeJSON(w, map[string]any{"success": false, "message": "로그인 후 이용할 수 있습니다."})
+		// [2026-09-25 보안 점검] 비로그인 상태에서 200 OK + success:false로
+		// 응답하면 클라이언트가 "실패했지만 요청 자체는 처리됐다"고 오해할 수
+		// 있고, 상태 코드만 보는 도구/모니터링에서도 인증 실패가 감지되지
+		// 않는다. 다른 인증 필요 핸들러들과 통일해서 401로 응답하도록 수정.
+		httputil.JSONError(w, http.StatusUnauthorized, "로그인 후 이용할 수 있습니다.")
 		return
 	}
 	user, err := models.GetUserByID(a.DB, userID)
 	if err != nil || user == nil {
-		writeJSON(w, map[string]any{"success": false, "message": "로그인 정보가 만료되었습니다. 다시 로그인해주세요."})
+		httputil.JSONError(w, http.StatusUnauthorized, "로그인 정보가 만료되었습니다. 다시 로그인해주세요.")
 		return
 	}
 	authorName := user.NicknameOr("스텔리언")
