@@ -306,7 +306,12 @@ func Load(projectDir string) *Config {
 		WebSearchEnabled: getenvBool("WEB_SEARCH_ENABLED", true),
 		WebSearchTimeout: time.Duration(getenvInt("WEB_SEARCH_TIMEOUT_SEC", 6)) * time.Second,
 
-		RateLimitEnabled:     getenvBool("RATE_LIMIT_ENABLED", true),
+		// [2026-09-25] 리도님 요청으로 요청 제한(rate limit) 기능을 완전히 껐습니다
+		// (일반 요청 제한 + 로그인/회원가입 무차별 대입 방지 제한 둘 다 - 같은
+		// RateLimitEnabled 플래그를 공유해서 씀). .env의 RATE_LIMIT_ENABLED 값과
+		// 무관하게 항상 false로 강제 - 다시 켜고 싶으면 이 줄을
+		// getenvBool("RATE_LIMIT_ENABLED", true)로 되돌리면 됩니다.
+		RateLimitEnabled:     false,
 		RateLimitWindowSec:   getenvInt("RATE_LIMIT_WINDOW_SEC", 10),
 		RateLimitMaxRequests: getenvInt("RATE_LIMIT_MAX_REQUESTS", 150),
 		RateLimitBanMinutes:  getenvInt("RATE_LIMIT_BAN_MINUTES", 15),
