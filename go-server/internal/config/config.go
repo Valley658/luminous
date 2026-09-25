@@ -74,6 +74,12 @@ type Config struct {
 	RateLimitMaxRequests int
 	RateLimitBanMinutes  int
 
+	// 로그인/회원가입 전용 - 전체 트래픽용 위 값들은 무차별 대입(brute force)을
+	// 막기엔 너무 느슨해서(150회/10초) 별도로 훨씬 빡빡한 제한을 둔다.
+	AuthRateLimitWindowSec   int
+	AuthRateLimitMaxRequests int
+	AuthRateLimitBanMinutes  int
+
 	AdminDriveAllowedEmail string
 
 	MeilisearchURL string
@@ -294,6 +300,12 @@ func Load(projectDir string) *Config {
 		RateLimitWindowSec:   getenvInt("RATE_LIMIT_WINDOW_SEC", 10),
 		RateLimitMaxRequests: getenvInt("RATE_LIMIT_MAX_REQUESTS", 150),
 		RateLimitBanMinutes:  getenvInt("RATE_LIMIT_BAN_MINUTES", 15),
+
+		// [2026-09-25 보안 감사: 로그인/회원가입은 비밀번호 무차별 대입 공격의
+		// 표적이라 훨씬 빡빡하게 - 기본 5분에 8번, 넘으면 20분 차단.]
+		AuthRateLimitWindowSec:   getenvInt("AUTH_RATE_LIMIT_WINDOW_SEC", 300),
+		AuthRateLimitMaxRequests: getenvInt("AUTH_RATE_LIMIT_MAX_REQUESTS", 8),
+		AuthRateLimitBanMinutes:  getenvInt("AUTH_RATE_LIMIT_BAN_MINUTES", 20),
 
 		AdminDriveAllowedEmail: getenv("ADMIN_DRIVE_ALLOWED_EMAIL", ""),
 

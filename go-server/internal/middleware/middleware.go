@@ -73,8 +73,12 @@ func CSRFGuard(next http.Handler) http.Handler {
 		if checkValue == "" {
 			checkValue = r.Header.Get("Referer")
 		}
+		// [2026-09-25 보안 감사: Origin/Referer가 둘 다 없으면 그냥 통과시키던
+		// 예전 방식은 CSRF 방어를 우회당할 수 있는 구멍이었다 - 실제 브라우저가
+		// 세션 쿠키를 들고 상태 변경 요청(POST 등)을 보낼 땐 거의 항상 둘 중
+		// 하나는 붙어 있으므로, 없으면 "통과"가 아니라 "거부"가 안전한 기본값이다.]
 		if checkValue == "" {
-			next.ServeHTTP(w, r)
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 		u, err := url.Parse(checkValue)

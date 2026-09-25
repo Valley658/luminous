@@ -174,6 +174,11 @@ func main() {
 	rateLimiter := plmw.NewRateLimiter(cfg.RateLimitEnabled, cfg.RateLimitWindowSec, cfg.RateLimitMaxRequests, cfg.RateLimitBanMinutes)
 	app.RateLimiter = rateLimiter
 
+	// [2026-09-25 보안 감사: 로그인/회원가입 무차별 대입 방지용 - 위 전체
+	// 트래픽 rate limiter와 별개로, /api/login·/api/register에만 훨씬 빡빡한
+	// 제한을 추가로 건다.]
+	authRateLimiter := plmw.NewRateLimiter(cfg.RateLimitEnabled, cfg.AuthRateLimitWindowSec, cfg.AuthRateLimitMaxRequests, cfg.AuthRateLimitBanMinutes)
+
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
@@ -185,8 +190,8 @@ func main() {
 	fileServer := http.FileServer(http.Dir(cfg.StaticDir))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
-	r.Post("/api/register", app.Register)
-	r.Post("/api/login", app.Login)
+	r.With(authRateLimiter.Middleware).Post("/api/register", app.Register)
+	r.With(authRateLimiter.Middleware).Post("/api/login", app.Login)
 	r.Get("/api/me", app.Me)
 	r.Get("/api/staff-roles", app.ApiStaffRolesHandler)
 	r.Get("/logout", app.Logout)
