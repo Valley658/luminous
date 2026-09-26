@@ -202,9 +202,17 @@ func (a *App) getVideosForMember(ctx context.Context, memberName, reqType, sortT
 					}
 				}
 				filtered = video.SortVideosByType(filtered, sortType)
-				return map[string]any{"videos": filtered, "nextPageToken": nullIfEmpty(next), "has_music": hasMusic, "has_replay": hasReplay}
+				out := map[string]any{"videos": filtered, "nextPageToken": nullIfEmpty(next), "has_music": hasMusic, "has_replay": hasReplay}
+				for k, v := range video.LatestPageQuotaFields() {
+					out[k] = v
+				}
+				return out
 			}
-			return map[string]any{"videos": []video.Video{}, "nextPageToken": nil, "has_music": hasMusic, "has_replay": hasReplay}
+			out := map[string]any{"videos": []video.Video{}, "nextPageToken": nil, "has_music": hasMusic, "has_replay": hasReplay}
+			for k, v := range video.LatestPageQuotaFields() {
+				out[k] = v
+			}
+			return out
 		}
 
 	case "music":
@@ -243,7 +251,11 @@ func (a *App) getVideosForMember(ctx context.Context, memberName, reqType, sortT
 			}
 			vids = video.SortVideosByType(filtered, sortType)
 		}
-		return map[string]any{"videos": vids, "nextPageToken": nullIfEmpty(next), "has_music": hasMusic, "has_replay": hasReplay}
+		out := map[string]any{"videos": vids, "nextPageToken": nullIfEmpty(next), "has_music": hasMusic, "has_replay": hasReplay}
+		for k, v := range video.LatestPageQuotaFields() {
+			out[k] = v
+		}
+		return out
 	}
 }
 

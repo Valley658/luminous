@@ -64,6 +64,22 @@ func CollectAllPagesForOldest(ctx context.Context, d *pdb.DB, targetID string, i
 	return SortVideosByType(all, "oldest"), truncated, quotaLimited
 }
 
+// LatestPageQuotaFields: "최신순"(기본) 페이지네이션 응답에 붙이는 할당량 안내용
+// 추가 필드. "오래된순"용 OldestSortExtraFields와 달리 이쪽은 상태가 truncated로
+// 구분되지 않고(페이지당 그냥 다음 페이지가 없을 뿐) 할당량 소진 여부만 알면
+// 되므로 훨씬 단순하다. 프론트엔드는 quota_limited가 true일 때 "일부 영상만
+// 보이고 있다"는 안내를 띄운다.
+func LatestPageQuotaFields() map[string]any {
+	if !QuotaIsExceeded() {
+		return map[string]any{}
+	}
+	label, _ := QuotaResetETA()
+	return map[string]any{
+		"quota_limited":         true,
+		"quota_reset_kst_label": label,
+	}
+}
+
 func OldestSortExtraFields(truncated, quotaLimited bool) map[string]any {
 	extra := map[string]any{}
 	if quotaLimited {

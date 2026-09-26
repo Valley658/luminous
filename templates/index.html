@@ -5291,5 +5291,64 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
     });
 })();
 </script>
+
+<!-- 유튜브 API 할당량 소진 안내 배너: script.js가 /api/videos/... 를 호출해서
+     영상 목록/페이지네이션을 불러오는데, 그 응답에 quota_limited가 실려오면
+     "지금 일부 영상만 보이는 중" 이라고 알려줌. script.js 자체는 배포 방식이
+     달라 직접 수정하지 않고, fetch를 감싸서 응답만 관찰하는 방식으로 구현함. -->
+<style>
+    .yt-quota-banner {
+        position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 9999;
+        max-width: 92vw; display: flex; align-items: center; gap: 10px;
+        background: #2a1f0d; border: 1px solid #6b4e1a; color: #f5c97a;
+        border-radius: 12px; padding: 12px 16px; font-size: 13.5px; line-height: 1.5;
+        box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
+    .yt-quota-banner i.fa-triangle-exclamation { color: #f5c518; flex-shrink: 0; }
+    .yt-quota-banner-close {
+        background: none; border: none; color: #f5c97a; opacity: .7; cursor: pointer;
+        font-size: 16px; line-height: 1; padding: 0 0 0 6px; flex-shrink: 0;
+    }
+    .yt-quota-banner-close:hover { opacity: 1; }
+    @media (max-width: 640px) { .yt-quota-banner { bottom: 78px; font-size: 12.5px; } }
+</style>
+<script>
+(function () {
+    if (typeof window.fetch !== "function") return;
+    var originalFetch = window.fetch;
+    var noticeShown = false;
+
+    function showQuotaBanner(etaLabel) {
+        if (noticeShown) return;
+        noticeShown = true;
+        var el = document.createElement("div");
+        el.className = "yt-quota-banner";
+        el.innerHTML =
+            '<i class="fas fa-triangle-exclamation"></i><span>지금 유튜브 API 할당량이 다 차서 일부 영상만 보이고 있어요.' +
+            (etaLabel ? " (한국시간 " + etaLabel + "경 자동 해결)" : "") +
+            '</span><button type="button" class="yt-quota-banner-close" aria-label="닫기">&times;</button>';
+        document.body.appendChild(el);
+        el.querySelector(".yt-quota-banner-close").addEventListener("click", function () {
+            el.remove();
+            noticeShown = false;
+        });
+        setTimeout(function () { if (el.parentNode) el.remove(); }, 20000);
+    }
+
+    window.fetch = function (input, init) {
+        return originalFetch.apply(this, arguments).then(function (response) {
+            try {
+                var url = typeof input === "string" ? input : (input && input.url) || "";
+                if (url.indexOf("/api/videos/") !== -1 && response.ok) {
+                    response.clone().json().then(function (data) {
+                        if (data && data.quota_limited) showQuotaBanner(data.quota_reset_kst_label);
+                    }).catch(function () {});
+                }
+            } catch (e) {}
+            return response;
+        });
+    };
+})();
+</script>
 </body>
 </html>
