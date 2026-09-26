@@ -52,6 +52,19 @@ func (w *sessionSavingWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
+// Flush: sessionSavingWriter가 http.ResponseWriter를 구조체 필드로 감싸고 있어서,
+// 이 메서드가 없으면 내부 ResponseWriter가 실제로 http.Flusher를 구현하더라도
+// 바깥쪽 sessionSavingWriter에 대한 타입 단언(w.(http.Flusher))은 항상 실패한다.
+// 그 결과 SSE(Server-Sent Events)로 응답하는 핸들러(예: 실시간 알림 스트림)가
+// 전부 "실시간 스트림을 지원하지 않는 서버 환경입니다" 500 에러를 반환하고 있었다.
+// 내부 ResponseWriter가 Flusher를 구현할 때만 그대로 위임한다.
+func (w *sessionSavingWriter) Flush() {
+	w.ensureSaved()
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func GetSession(r *http.Request) *session.Session {
 	s, _ := r.Context().Value(sessionCtxKey).(*session.Session)
 	return s

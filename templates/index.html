@@ -5205,119 +5205,73 @@ function initLumiImageAttach() {
 document.addEventListener("DOMContentLoaded", initLumiChat);
 </script>
 
-<!-- 배경음악(멤버 개인곡) 플레이어 위젯: 사이드바에서 멤버를 클릭하면 그 멤버의
-     개인곡으로 바뀌어서 반복 재생됨. static/music/<멤버이름>/ 폴더에 이미지 1개 +
-     오디오 1개가 있는 멤버만 재생 대상이 됨(서버가 시작할 때 한 번 스캔). -->
-<div class="bgmusic-widget" id="bgMusicWidget" role="button" aria-label="배경음악 재생/일시정지">
-    <div class="bgmusic-disc" id="bgMusicDisc">
-        <div class="bgmusic-disc-hole"></div>
-        <div class="bgmusic-icon" id="bgMusicIcon"><i class="fas fa-play"></i></div>
-    </div>
-    <div class="bgmusic-info">
-        <div class="bgmusic-title" id="bgMusicTitle">-</div>
-        <div class="bgmusic-sub">배경음악</div>
-    </div>
-</div>
+<!-- 배경음악(멤버 개인곡): 사이드바에서 멤버를 클릭하면 그 멤버의 개인곡이 낮은
+     음량으로 반복 재생됨. 사진/디스크 UI 없이 소리만 나오고, 음소거 버튼만 작게 둠.
+     static/music/<멤버이름>/ 폴더에 이미지 1개 + 오디오 1개가 있는 멤버만 대상
+     (서버가 시작할 때 한 번 스캔). -->
+<button type="button" class="bgmusic-mute-btn" id="bgMusicMuteBtn" aria-label="배경음악 음소거/재생">
+    <i class="fas fa-volume-low"></i>
+</button>
 <audio id="bgMusicAudio" preload="none"></audio>
 
 <style>
-    .bgmusic-widget {
-        position: fixed; right: 26px; bottom: 26px; z-index: 9998;
-        display: flex; align-items: center; gap: 0; overflow: hidden;
-        background: rgba(20,20,20,.88); backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,.08); border-radius: 999px;
-        box-shadow: 0 10px 32px rgba(0,0,0,.5); cursor: pointer; user-select: none;
-        max-width: 92px; transition: max-width .28s ease, opacity .25s, transform .25s;
-        opacity: 0; transform: translateY(12px) scale(.9); pointer-events: none;
+    .bgmusic-mute-btn {
+        position: fixed; right: 22px; bottom: 22px; z-index: 9998;
+        width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.1);
+        background: rgba(20,20,20,.8); backdrop-filter: blur(8px); color: #ccc; font-size: 14px;
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+        box-shadow: 0 6px 20px rgba(0,0,0,.4);
+        opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .25s, transform .25s;
     }
-    .bgmusic-widget.visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-    .bgmusic-widget:hover { max-width: 320px; }
-    .bgmusic-disc {
-        position: relative; width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0;
-        background: #181818 center/cover no-repeat; box-shadow: inset 0 0 0 3px rgba(255,255,255,.08);
-        background-image: var(--bgmusic-img, none);
-        animation: bgmusic-spin 8s linear infinite; animation-play-state: paused;
-    }
-    .bgmusic-widget.playing .bgmusic-disc { animation-play-state: running; }
-    .bgmusic-disc-hole {
-        position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; border-radius: 50%;
-        background: #0f0f0f; border: 3px solid rgba(255,255,255,.5); transform: translate(-50%, -50%); z-index: 2;
-    }
-    .bgmusic-icon {
-        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-        color: #fff; font-size: 24px; background: rgba(0,0,0,.32); border-radius: 50%;
-        opacity: 0; transition: opacity .15s;
-    }
-    .bgmusic-widget:not(.playing) .bgmusic-icon,
-    .bgmusic-widget:hover .bgmusic-icon { opacity: 1; }
-    @keyframes bgmusic-spin { to { transform: rotate(360deg); } }
-    .bgmusic-info {
-        min-width: 0; padding: 0 20px 0 16px; white-space: nowrap;
-        opacity: 0; transition: opacity .2s;
-    }
-    .bgmusic-widget:hover .bgmusic-info { opacity: 1; }
-    .bgmusic-title { font-size: 15px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; }
-    .bgmusic-sub { font-size: 12px; color: #999; margin-top: 2px; }
-    @media (max-width: 640px) {
-        .bgmusic-widget { right: 14px; bottom: 14px; max-width: 68px; }
-        .bgmusic-disc { width: 68px; height: 68px; }
-        .bgmusic-widget:hover { max-width: 68px; }
-        .bgmusic-info { display: none; }
-    }
+    .bgmusic-mute-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .bgmusic-mute-btn.muted { color: #f87171; }
+    @media (max-width: 640px) { .bgmusic-mute-btn { right: 14px; bottom: 14px; } }
 </style>
 
 <script>
 (function () {
     var MEMBER_MUSIC = {{ MEMBER_MUSIC | tojson }};
-    var memberNames = Object.keys(MEMBER_MUSIC);
-    var widget = document.getElementById("bgMusicWidget");
-    if (!widget || memberNames.length === 0) {
-        // 재생 가능한 개인곡이 하나도 없으면(스캔 결과 없음) 위젯 자체를 숨김.
-        if (widget) widget.style.display = "none";
+    var BGMUSIC_VOLUME = 0.22; // 배경음악답게 작게. 사용자가 뮤트 버튼으로 끌 수 있음.
+    var btn = document.getElementById("bgMusicMuteBtn");
+    if (!btn || Object.keys(MEMBER_MUSIC).length === 0) {
+        if (btn) btn.style.display = "none";
         return;
     }
 
     var audio = document.getElementById("bgMusicAudio");
-    var disc = document.getElementById("bgMusicDisc");
-    var icon = document.getElementById("bgMusicIcon");
-    var titleEl = document.getElementById("bgMusicTitle");
     audio.loop = true;
+    audio.volume = BGMUSIC_VOLUME;
 
     var currentTrackMember = null;
 
-    function setPlayingUI(isPlaying) {
-        widget.classList.toggle("playing", isPlaying);
-        icon.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    function setMuteIcon() {
+        btn.classList.toggle("muted", audio.muted);
+        btn.innerHTML = audio.muted
+            ? '<i class="fas fa-volume-xmark"></i>'
+            : '<i class="fas fa-volume-low"></i>';
     }
 
-    function loadTrack(memberName, autoplay) {
+    function loadTrack(memberName) {
         var track = MEMBER_MUSIC[memberName];
         if (!track) return;
         currentTrackMember = memberName;
-        widget.classList.add("visible");
-        disc.style.setProperty("--bgmusic-img", "url('" + track.img + "')");
-        titleEl.textContent = track.title || memberName;
+        btn.classList.add("visible");
         audio.src = track.song;
-        if (autoplay) {
-            audio.play().then(function () { setPlayingUI(true); }).catch(function () { setPlayingUI(false); });
-        }
+        audio.play().catch(function () {
+            // 브라우저 자동재생 정책으로 막히면, 다음 클릭(사용자 동작)에서
+            // 자연스럽게 다시 시도됨(멤버를 다시 클릭하거나 뮤트 버튼 클릭).
+        });
     }
 
-    widget.addEventListener("click", function () {
-        if (!audio.src) return;
-        if (audio.paused) {
-            audio.play().then(function () { setPlayingUI(true); }).catch(function () {});
-        } else {
-            audio.pause();
-            setPlayingUI(false);
-        }
+    btn.addEventListener("click", function () {
+        audio.muted = !audio.muted;
+        if (!audio.muted && audio.paused && audio.src) audio.play().catch(function () {});
+        setMuteIcon();
     });
-
-    audio.addEventListener("ended", function () { setPlayingUI(false); });
 
     // 사이드바에서 멤버를 클릭하면 그 멤버의 개인곡으로 전환. 기존 script.js의
     // currentMember 상태와는 독립적으로 data-member-name 속성만 보고 동작함.
-    // 위젯은 처음엔 숨겨져 있다가 개인곡이 있는 멤버를 클릭해야 나타나고,
+    // 버튼은 처음엔 숨겨져 있다가 개인곡이 있는 멤버를 클릭해야 나타나고,
     // 스텔라이브(전체 보기)로 돌아가면 다시 멈추고 숨겨짐.
     document.addEventListener("click", function (e) {
         var item = e.target.closest(".nav-item");
@@ -5326,13 +5280,12 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
         if (!name) return;
         if (name === "스텔라이브") {
             audio.pause();
-            setPlayingUI(false);
-            widget.classList.remove("visible");
+            btn.classList.remove("visible");
             currentTrackMember = null;
             return;
         }
         if (!MEMBER_MUSIC[name] || name === currentTrackMember) return;
-        loadTrack(name, true);
+        loadTrack(name);
     });
 })();
 </script>
