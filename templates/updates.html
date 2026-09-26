@@ -33,8 +33,11 @@
         }
         .upd-hero p { margin: 0; color: #999; font-size: 14.5px; }
 
-        .upd-entry { position: relative; padding: 38px 0; border-bottom: 1px dashed #262626; }
-        .upd-entry:last-of-type { border-bottom: none; }
+        .upd-entry { position: relative; padding: 40px 0; }
+        .upd-entry + .upd-entry::before {
+            content: "✦"; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+            color: #333; font-size: 13px; background: var(--bg-page, #0f0f0f); padding: 0 14px;
+        }
 
         .upd-entry-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 6px; }
         .upd-emoji {
