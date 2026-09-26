@@ -1,6 +1,49 @@
 package video
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
+
+// TestPoolDiskCache_SurvivesRestart: 마지막으로 성공한 풀을 디스크에 저장해두면,
+// (서버 재시작을 흉내낸) 새 Pool이 그 파일에서 즉시 채워져서 첫 방문자부터
+// 빈 목록을 보지 않아야 한다 - 유튜브 API 할당량이 소진된 채로 재시작해도
+// "시간이 지나도 아무것도 안 보이는" 상태가 되지 않게 하는 게 목적.
+func TestPoolDiskCache_SurvivesRestart(t *testing.T) {
+	cachePath := filepath.Join(t.TempDir(), "video_pool_cache.json")
+
+	p1 := NewPool(cachePath)
+	if !p1.IsEmpty() {
+		t.Fatal("새로 만든 풀은 캐시 파일이 없으면 비어있어야 함")
+	}
+	want := []Video{
+		{Title: "영상 1", VideoID: "abc123"},
+		{Title: "영상 2", VideoID: "def456"},
+	}
+	p1.set(want)
+
+	// "서버 재시작" 흉내: 같은 cachePath로 완전히 새 Pool을 만든다.
+	p2 := NewPool(cachePath)
+	got := p2.Get()
+	if len(got) != len(want) {
+		t.Fatalf("재시작 후 캐시에서 복원된 영상 개수 = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i].VideoID != want[i].VideoID {
+			t.Errorf("영상[%d].VideoID = %q, want %q", i, got[i].VideoID, want[i].VideoID)
+		}
+	}
+}
+
+func TestPoolDiskCache_EmptyPathDisablesCache(t *testing.T) {
+	p := NewPool("")
+	p.set([]Video{{Title: "영상", VideoID: "x"}})
+	// cachePath가 빈 문자열이면 persist가 아무 파일도 만들지 않아야 하고,
+	// 이게 패닉/에러 없이 조용히 넘어가야 한다 (여기서 확인하는 건 그것뿐).
+	if p.IsEmpty() {
+		t.Fatal("set() 직후에는 비어있으면 안 됨")
+	}
+}
 
 func TestIsShortTitle(t *testing.T) {
 	cases := []struct {

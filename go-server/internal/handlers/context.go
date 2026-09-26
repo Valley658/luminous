@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"log"
+	"path/filepath"
 	"time"
 
 	"pastellive/internal/cache"
@@ -61,7 +62,7 @@ func New(db *pdb.DB, lumiDB *pdb.DB, cfg *config.Config, store *session.Store) *
 		LumiDB:               lumiDB,
 		Cfg:                  cfg,
 		SessionStore:         store,
-		VideoPool:            video.NewPool(),
+		VideoPool:            video.NewPool(filepath.Join(cfg.ProjectDir, "data", "video_pool_cache.json")),
 		Cache:                cache.New(),
 		Templates:            gotemplates.New(cfg.TemplatesDir, cfg.StaticDir, cfg.SiteHost),
 		JavaImage:            javaimage.New(cfg.JavaImageServiceURL, cfg.JavaImageServiceTimeout),

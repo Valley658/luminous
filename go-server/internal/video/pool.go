@@ -3,8 +3,11 @@ package video
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -16,13 +19,15 @@ type Pool struct {
 	mu     sync.RWMutex
 	videos []Video
 
-	// [2026-09-18: 유튜브 할당량 초과 + RSS까지 동시에 실패하는 장애 상황에서,
-	// 풀이 비어있는 동안 들어오는 방문자 요청마다 RefreshIfEmpty가 매번 25~30개
-	// 채널/재생목록 전체를 다시 긁어가려고 시도하면서 유튜브에 요청을 폭격하고
-	// 있었음(로그에서 1분에 여러 번, 심지어 동시에 중복으로 재시도하는 것도
-	// 확인됨) - 이게 오히려 RSS 쪽 요청까지 더 실패하게 만들거나 할당량 회복을
-	// 늦출 수 있다고 판단해서, 풀이 빈 상태에서의 재시도에 쿨다운과 중복 실행
-	// 방지 락을 추가함.]
+	// [2026-09-26: 유튜브 API 할당량이 소진된 채로(또는 RSS까지 동시에 실패한
+	// 채로) 서버가 재시작되면, 메모리에만 있던 풀이 비어있는 상태로 다시
+	// 시작해서 "시간이 아무리 지나도" 첫 성공적인 갱신이 일어나기 전까지는
+	// 방문자에게 영상이 하나도 안 보이는 문제가 있었다. cachePath에 마지막으로
+	// 성공한 풀을 JSON으로 저장해두고, 다음 시작 때 그걸로 먼저 채워서
+	// 갱신이 (할당량 소진 등으로) 계속 실패하는 동안에도 마지막으로 알려진
+	// 목록을 계속 보여줄 수 있게 한다.]
+	cachePath string
+
 	refreshMu        sync.Mutex
 	refreshing       bool
 	lastEmptyAttempt time.Time
@@ -34,8 +39,26 @@ type Pool struct {
 // 유튜브 쪽에 부담을 더 주지 않도록 하는 안전장치.
 const emptyPoolRefreshCooldown = 20 * time.Second
 
-func NewPool() *Pool {
-	return &Pool{}
+// NewPool은 cachePath(빈 문자열이면 디스크 캐시 없이 메모리만 사용)에서
+// 마지막으로 저장된 영상 목록을 읽어 미리 채워둔 채로 풀을 만든다. 그래야
+// 서버가 막 재시작됐고 유튜브 API 할당량도 소진된 상태라도, 첫 방문자부터
+// 빈 화면 대신 마지막으로 알려진 영상 목록을 바로 볼 수 있다.
+func NewPool(cachePath string) *Pool {
+	p := &Pool{cachePath: cachePath}
+	if cachePath == "" {
+		return p
+	}
+	data, err := os.ReadFile(cachePath)
+	if err != nil {
+		return p
+	}
+	var cached []Video
+	if err := json.Unmarshal(data, &cached); err != nil || len(cached) == 0 {
+		return p
+	}
+	p.videos = cached
+	log.Printf("영상 풀: 디스크 캐시에서 %d개 영상으로 초기화 (%s)", len(cached), cachePath)
+	return p
 }
 
 func (p *Pool) Get() []Video {
@@ -56,6 +79,30 @@ func (p *Pool) set(videos []Video) {
 	p.mu.Lock()
 	p.videos = videos
 	p.mu.Unlock()
+	p.persist(videos)
+}
+
+// persist는 성공적으로 갱신된 풀을 디스크에 최선 노력으로 저장한다(실패해도
+// 서비스에는 영향 없음 - 그냥 다음 재시작 때 캐시 활용을 못 할 뿐).
+func (p *Pool) persist(videos []Video) {
+	if p.cachePath == "" || len(videos) == 0 {
+		return
+	}
+	data, err := json.Marshal(videos)
+	if err != nil {
+		return
+	}
+	if dir := filepath.Dir(p.cachePath); dir != "" && dir != "." {
+		_ = os.MkdirAll(dir, 0o755)
+	}
+	tmp := p.cachePath + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		log.Printf("영상 풀 디스크 캐시 저장 실패: %v", err)
+		return
+	}
+	if err := os.Rename(tmp, p.cachePath); err != nil {
+		log.Printf("영상 풀 디스크 캐시 저장 실패(rename): %v", err)
+	}
 }
 
 type memberChannelRow struct {
