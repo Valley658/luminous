@@ -5222,43 +5222,46 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
 
 <style>
     .bgmusic-widget {
-        position: fixed; right: 20px; bottom: 20px; z-index: 9998;
+        position: fixed; right: 26px; bottom: 26px; z-index: 9998;
         display: flex; align-items: center; gap: 0; overflow: hidden;
         background: rgba(20,20,20,.88); backdrop-filter: blur(10px);
         border: 1px solid rgba(255,255,255,.08); border-radius: 999px;
-        box-shadow: 0 8px 28px rgba(0,0,0,.45); cursor: pointer; user-select: none;
-        max-width: 56px; transition: max-width .28s ease;
+        box-shadow: 0 10px 32px rgba(0,0,0,.5); cursor: pointer; user-select: none;
+        max-width: 92px; transition: max-width .28s ease, opacity .25s, transform .25s;
+        opacity: 0; transform: translateY(12px) scale(.9); pointer-events: none;
     }
-    .bgmusic-widget:hover { max-width: 240px; }
+    .bgmusic-widget.visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    .bgmusic-widget:hover { max-width: 320px; }
     .bgmusic-disc {
-        position: relative; width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
-        background: #181818 center/cover no-repeat; box-shadow: inset 0 0 0 2px rgba(255,255,255,.08);
+        position: relative; width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0;
+        background: #181818 center/cover no-repeat; box-shadow: inset 0 0 0 3px rgba(255,255,255,.08);
         background-image: var(--bgmusic-img, none);
-        animation: bgmusic-spin 7s linear infinite; animation-play-state: paused;
+        animation: bgmusic-spin 8s linear infinite; animation-play-state: paused;
     }
     .bgmusic-widget.playing .bgmusic-disc { animation-play-state: running; }
     .bgmusic-disc-hole {
-        position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border-radius: 50%;
-        background: #0f0f0f; border: 2px solid rgba(255,255,255,.5); transform: translate(-50%, -50%); z-index: 2;
+        position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; border-radius: 50%;
+        background: #0f0f0f; border: 3px solid rgba(255,255,255,.5); transform: translate(-50%, -50%); z-index: 2;
     }
     .bgmusic-icon {
         position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-        color: #fff; font-size: 15px; background: rgba(0,0,0,.3); border-radius: 50%;
+        color: #fff; font-size: 24px; background: rgba(0,0,0,.32); border-radius: 50%;
         opacity: 0; transition: opacity .15s;
     }
     .bgmusic-widget:not(.playing) .bgmusic-icon,
     .bgmusic-widget:hover .bgmusic-icon { opacity: 1; }
     @keyframes bgmusic-spin { to { transform: rotate(360deg); } }
     .bgmusic-info {
-        min-width: 0; padding: 0 16px 0 12px; white-space: nowrap;
+        min-width: 0; padding: 0 20px 0 16px; white-space: nowrap;
         opacity: 0; transition: opacity .2s;
     }
     .bgmusic-widget:hover .bgmusic-info { opacity: 1; }
-    .bgmusic-title { font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; }
-    .bgmusic-sub { font-size: 11px; color: #999; margin-top: 1px; }
+    .bgmusic-title { font-size: 15px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; }
+    .bgmusic-sub { font-size: 12px; color: #999; margin-top: 2px; }
     @media (max-width: 640px) {
-        .bgmusic-widget { right: 14px; bottom: 14px; }
-        .bgmusic-widget:hover { max-width: 56px; }
+        .bgmusic-widget { right: 14px; bottom: 14px; max-width: 68px; }
+        .bgmusic-disc { width: 68px; height: 68px; }
+        .bgmusic-widget:hover { max-width: 68px; }
         .bgmusic-info { display: none; }
     }
 </style>
@@ -5291,6 +5294,7 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
         var track = MEMBER_MUSIC[memberName];
         if (!track) return;
         currentTrackMember = memberName;
+        widget.classList.add("visible");
         disc.style.setProperty("--bgmusic-img", "url('" + track.img + "')");
         titleEl.textContent = track.title || memberName;
         audio.src = track.song;
@@ -5299,15 +5303,8 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
         }
     }
 
-    function pickRandomMember() {
-        return memberNames[Math.floor(Math.random() * memberNames.length)];
-    }
-
     widget.addEventListener("click", function () {
-        if (!audio.src) {
-            loadTrack(pickRandomMember(), true);
-            return;
-        }
+        if (!audio.src) return;
         if (audio.paused) {
             audio.play().then(function () { setPlayingUI(true); }).catch(function () {});
         } else {
@@ -5320,17 +5317,23 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
 
     // 사이드바에서 멤버를 클릭하면 그 멤버의 개인곡으로 전환. 기존 script.js의
     // currentMember 상태와는 독립적으로 data-member-name 속성만 보고 동작함.
+    // 위젯은 처음엔 숨겨져 있다가 개인곡이 있는 멤버를 클릭해야 나타나고,
+    // 스텔라이브(전체 보기)로 돌아가면 다시 멈추고 숨겨짐.
     document.addEventListener("click", function (e) {
         var item = e.target.closest(".nav-item");
         if (!item) return;
         var name = item.dataset.memberName;
-        if (!name || !MEMBER_MUSIC[name] || name === currentTrackMember) return;
+        if (!name) return;
+        if (name === "스텔라이브") {
+            audio.pause();
+            setPlayingUI(false);
+            widget.classList.remove("visible");
+            currentTrackMember = null;
+            return;
+        }
+        if (!MEMBER_MUSIC[name] || name === currentTrackMember) return;
         loadTrack(name, true);
     });
-
-    // 접속하자마자 재생 시도. 브라우저 자동재생 정책 때문에 막히면 위젯이
-    // 일시정지 아이콘으로 보이고, 페이지 아무 곳이나 클릭/멤버 클릭 시 재생됨.
-    loadTrack(pickRandomMember(), true);
 })();
 </script>
 </body>
