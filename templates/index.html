@@ -5204,5 +5204,134 @@ function initLumiImageAttach() {
 }
 document.addEventListener("DOMContentLoaded", initLumiChat);
 </script>
+
+<!-- 배경음악(멤버 개인곡) 플레이어 위젯: 사이드바에서 멤버를 클릭하면 그 멤버의
+     개인곡으로 바뀌어서 반복 재생됨. static/music/<멤버이름>/ 폴더에 이미지 1개 +
+     오디오 1개가 있는 멤버만 재생 대상이 됨(서버가 시작할 때 한 번 스캔). -->
+<div class="bgmusic-widget" id="bgMusicWidget" role="button" aria-label="배경음악 재생/일시정지">
+    <div class="bgmusic-disc" id="bgMusicDisc">
+        <div class="bgmusic-disc-hole"></div>
+        <div class="bgmusic-icon" id="bgMusicIcon"><i class="fas fa-play"></i></div>
+    </div>
+    <div class="bgmusic-info">
+        <div class="bgmusic-title" id="bgMusicTitle">-</div>
+        <div class="bgmusic-sub">배경음악</div>
+    </div>
+</div>
+<audio id="bgMusicAudio" preload="none"></audio>
+
+<style>
+    .bgmusic-widget {
+        position: fixed; right: 20px; bottom: 20px; z-index: 9998;
+        display: flex; align-items: center; gap: 0; overflow: hidden;
+        background: rgba(20,20,20,.88); backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,.08); border-radius: 999px;
+        box-shadow: 0 8px 28px rgba(0,0,0,.45); cursor: pointer; user-select: none;
+        max-width: 56px; transition: max-width .28s ease;
+    }
+    .bgmusic-widget:hover { max-width: 240px; }
+    .bgmusic-disc {
+        position: relative; width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+        background: #181818 center/cover no-repeat; box-shadow: inset 0 0 0 2px rgba(255,255,255,.08);
+        background-image: var(--bgmusic-img, none);
+        animation: bgmusic-spin 7s linear infinite; animation-play-state: paused;
+    }
+    .bgmusic-widget.playing .bgmusic-disc { animation-play-state: running; }
+    .bgmusic-disc-hole {
+        position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border-radius: 50%;
+        background: #0f0f0f; border: 2px solid rgba(255,255,255,.5); transform: translate(-50%, -50%); z-index: 2;
+    }
+    .bgmusic-icon {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 15px; background: rgba(0,0,0,.3); border-radius: 50%;
+        opacity: 0; transition: opacity .15s;
+    }
+    .bgmusic-widget:not(.playing) .bgmusic-icon,
+    .bgmusic-widget:hover .bgmusic-icon { opacity: 1; }
+    @keyframes bgmusic-spin { to { transform: rotate(360deg); } }
+    .bgmusic-info {
+        min-width: 0; padding: 0 16px 0 12px; white-space: nowrap;
+        opacity: 0; transition: opacity .2s;
+    }
+    .bgmusic-widget:hover .bgmusic-info { opacity: 1; }
+    .bgmusic-title { font-size: 13px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; }
+    .bgmusic-sub { font-size: 11px; color: #999; margin-top: 1px; }
+    @media (max-width: 640px) {
+        .bgmusic-widget { right: 14px; bottom: 14px; }
+        .bgmusic-widget:hover { max-width: 56px; }
+        .bgmusic-info { display: none; }
+    }
+</style>
+
+<script>
+(function () {
+    var MEMBER_MUSIC = {{ MEMBER_MUSIC | tojson }};
+    var memberNames = Object.keys(MEMBER_MUSIC);
+    var widget = document.getElementById("bgMusicWidget");
+    if (!widget || memberNames.length === 0) {
+        // 재생 가능한 개인곡이 하나도 없으면(스캔 결과 없음) 위젯 자체를 숨김.
+        if (widget) widget.style.display = "none";
+        return;
+    }
+
+    var audio = document.getElementById("bgMusicAudio");
+    var disc = document.getElementById("bgMusicDisc");
+    var icon = document.getElementById("bgMusicIcon");
+    var titleEl = document.getElementById("bgMusicTitle");
+    audio.loop = true;
+
+    var currentTrackMember = null;
+
+    function setPlayingUI(isPlaying) {
+        widget.classList.toggle("playing", isPlaying);
+        icon.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    }
+
+    function loadTrack(memberName, autoplay) {
+        var track = MEMBER_MUSIC[memberName];
+        if (!track) return;
+        currentTrackMember = memberName;
+        disc.style.setProperty("--bgmusic-img", "url('" + track.img + "')");
+        titleEl.textContent = track.title || memberName;
+        audio.src = track.song;
+        if (autoplay) {
+            audio.play().then(function () { setPlayingUI(true); }).catch(function () { setPlayingUI(false); });
+        }
+    }
+
+    function pickRandomMember() {
+        return memberNames[Math.floor(Math.random() * memberNames.length)];
+    }
+
+    widget.addEventListener("click", function () {
+        if (!audio.src) {
+            loadTrack(pickRandomMember(), true);
+            return;
+        }
+        if (audio.paused) {
+            audio.play().then(function () { setPlayingUI(true); }).catch(function () {});
+        } else {
+            audio.pause();
+            setPlayingUI(false);
+        }
+    });
+
+    audio.addEventListener("ended", function () { setPlayingUI(false); });
+
+    // 사이드바에서 멤버를 클릭하면 그 멤버의 개인곡으로 전환. 기존 script.js의
+    // currentMember 상태와는 독립적으로 data-member-name 속성만 보고 동작함.
+    document.addEventListener("click", function (e) {
+        var item = e.target.closest(".nav-item");
+        if (!item) return;
+        var name = item.dataset.memberName;
+        if (!name || !MEMBER_MUSIC[name] || name === currentTrackMember) return;
+        loadTrack(name, true);
+    });
+
+    // 접속하자마자 재생 시도. 브라우저 자동재생 정책 때문에 막히면 위젯이
+    // 일시정지 아이콘으로 보이고, 페이지 아무 곳이나 클릭/멤버 클릭 시 재생됨.
+    loadTrack(pickRandomMember(), true);
+})();
+</script>
 </body>
 </html>

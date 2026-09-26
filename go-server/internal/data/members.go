@@ -1,8 +1,10 @@
 package data
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Member struct {
@@ -108,6 +110,64 @@ func BuildGenerationRepImageOverrides(staticDir string) map[string]string {
 		}
 	}
 	return overrides
+}
+
+// MemberMusicTrack: static/music/<멤버이름>/ 폴더 안에 있는 개인곡 정보.
+// 폴더당 이미지 1개(앨범아트) + 오디오 1개를 스캔해서 채워진다.
+type MemberMusicTrack struct {
+	Img   string `json:"img"`
+	Song  string `json:"song"`
+	Title string `json:"title"`
+}
+
+var memberMusicImgExts = map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
+var memberMusicAudioExts = map[string]bool{".mp3": true, ".ogg": true, ".m4a": true, ".wav": true}
+
+// BuildMemberMusicMap: static/music/ 아래 멤버 이름으로 된 폴더들을 훑어서,
+// 폴더 안의 이미지/오디오 파일 하나씩을 찾아 URL로 만들어준다. 서버 시작 시
+// 한 번만 스캔하고 이후에는 이 결과를 그대로 재사용한다(요청마다 디스크 안 읽음).
+// 파일명에 공백/한글/특수문자가 섞여 있어도 URL로 안전하게 나가도록 세그먼트별로
+// url.PathEscape를 적용한다.
+func BuildMemberMusicMap(staticDir string) map[string]MemberMusicTrack {
+	result := make(map[string]MemberMusicTrack)
+	root := filepath.Join(staticDir, "music")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return result
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		memberName := entry.Name()
+		files, err := os.ReadDir(filepath.Join(root, memberName))
+		if err != nil {
+			continue
+		}
+		var imgFile, songFile string
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+			ext := strings.ToLower(filepath.Ext(f.Name()))
+			if imgFile == "" && memberMusicImgExts[ext] {
+				imgFile = f.Name()
+			}
+			if songFile == "" && memberMusicAudioExts[ext] {
+				songFile = f.Name()
+			}
+		}
+		if imgFile == "" || songFile == "" {
+			continue
+		}
+		title := strings.TrimSuffix(songFile, filepath.Ext(songFile))
+		result[memberName] = MemberMusicTrack{
+			Img:   "/static/music/" + url.PathEscape(memberName) + "/" + url.PathEscape(imgFile),
+			Song:  "/static/music/" + url.PathEscape(memberName) + "/" + url.PathEscape(songFile),
+			Title: title,
+		}
+	}
+	return result
 }
 
 type SidebarGroups struct {

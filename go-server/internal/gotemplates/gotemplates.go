@@ -36,6 +36,8 @@ type Engine struct {
 
 	mu    sync.RWMutex
 	cache map[string]*exec.Template
+
+	memberMusic map[string]data.MemberMusicTrack
 }
 
 // [2026-09-25 보안 점검 - Critical] gonja(Jinja2 스타일 템플릿 엔진)의
@@ -61,11 +63,12 @@ func init() {
 
 func New(templatesDir, staticDir, siteHost string) *Engine {
 	return &Engine{
-		dir:        templatesDir,
-		staticDir:  staticDir,
-		siteScheme: "https",
-		siteHost:   siteHost,
-		cache:      make(map[string]*exec.Template),
+		dir:         templatesDir,
+		staticDir:   staticDir,
+		siteScheme:  "https",
+		siteHost:    siteHost,
+		cache:       make(map[string]*exec.Template),
+		memberMusic: data.BuildMemberMusicMap(staticDir),
 	}
 }
 
@@ -147,6 +150,10 @@ func (e *Engine) baseGlobals(genRepOverrides map[string]string) map[string]any {
 	for k, v := range genRepOverrides {
 		repOverrides[k] = v
 	}
+	memberMusic := make(map[string]any, len(e.memberMusic))
+	for k, v := range e.memberMusic {
+		memberMusic[k] = map[string]any{"img": v.Img, "song": v.Song, "title": v.Title}
+	}
 
 	urlFor := func(args *exec.VarArgs) *exec.Value {
 		endpoint := args.First().String()
@@ -176,6 +183,7 @@ func (e *Engine) baseGlobals(genRepOverrides map[string]string) map[string]any {
 		"MEMBER_FULL_NAMES":              memberFullNames,
 		"MEMBER_ACCENT_COLORS":           accentColors,
 		"MEMBER_IMAGES":                  memberImages,
+		"MEMBER_MUSIC":                   memberMusic,
 		"GENERATION_REP_IMAGE_OVERRIDES": repOverrides,
 		"url_for":                        exec.AsSafeValue(urlFor),
 		"versioned_static":               exec.AsSafeValue(versionedStatic),
