@@ -569,6 +569,11 @@
             background-color:var(--border-soft2); color:var(--text-primary); border: none; border-radius: 50%; font-size: 16px; cursor: pointer;
         }
         .pl-notif-btn:hover { background-color:var(--border-strong3); }
+        .pl-updates-btn {
+            display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+            background-color:var(--border-soft2); color:var(--text-primary); border: none; border-radius: 50%; font-size: 15px; cursor: pointer;
+        }
+        .pl-updates-btn:hover { background-color:var(--border-strong3); }
         .pl-notif-badge {
             position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; background: #f43f5e; color: #fff;
             font-size: 10px; font-weight: bold; border-radius: 999px; display: flex; align-items: center; justify-content: center; line-height: 1;
@@ -953,6 +958,7 @@
                         <button onclick="startAddToPlaylistMode()"><i class="fas fa-list"></i> 재생목록에 추가</button>
                     </div>
                 </div>
+                <button class="pl-updates-btn" onclick="location.href='/updates'" title="업데이트로그" aria-label="업데이트로그"><i class="fas fa-bullhorn"></i></button>
             </div>
 
             <div class="pl-header-right" id="headerRight"></div>

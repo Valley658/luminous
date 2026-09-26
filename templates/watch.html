@@ -207,6 +207,7 @@
             
             
             <button class="pl-create-btn" onclick="location.href='/?view=create'" title="만들기"><i class="fas fa-plus"></i><span>만들기</span></button>
+            <button class="pl-updates-btn" onclick="location.href='/updates'" title="업데이트로그" aria-label="업데이트로그"><i class="fas fa-bullhorn"></i></button>
         </div>
 
         <style>
@@ -231,6 +232,11 @@
             }
             .watch-header-actions .pl-kirinuki-btn i { color:#ff9f43; }
             .watch-header-actions .pl-kirinuki-btn:hover, .watch-header-actions .pl-create-btn:hover { background-color:var(--border-strong3); }
+            .watch-header-actions .pl-updates-btn {
+                display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
+                background-color:var(--border-soft2); color:var(--text-primary); border: none; border-radius: 50%; font-size: 15px; cursor: pointer;
+            }
+            .watch-header-actions .pl-updates-btn:hover { background-color:var(--border-strong3); }
             @media (max-width: 900px) { .watch-header-actions span { display: none; } .watch-header-actions button { padding: 8px 12px; } }
             @media (max-width: 700px) { .watch-search-container { margin: 0 10px; } }
             

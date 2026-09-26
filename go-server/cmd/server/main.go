@@ -263,6 +263,7 @@ func main() {
 	r.Get("/api/highlights/{clipID}", app.ApiHighlightStatusHandler)
 	r.Get("/api/highlights", app.ApiHighlightsListHandler)
 	r.Get("/highlights", app.HighlightsGalleryPageHandler)
+	r.Get("/updates", app.UpdatesPageHandler)
 
 	r.Post("/api/history/add", app.ApiAddHistoryHandler)
 	r.Get("/api/history", app.ApiGetHistoryHandler)

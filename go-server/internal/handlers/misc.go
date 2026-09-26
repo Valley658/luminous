@@ -24,6 +24,15 @@ func (a *App) ApiStaffRolesHandler(w http.ResponseWriter, r *http.Request) {
 	httputil.JSON(w, 200, a.Cfg.StaffRoleLabels)
 }
 
+func (a *App) UpdatesPageHandler(w http.ResponseWriter, r *http.Request) {
+	err := a.Templates.Render(w, r, "updates.html", map[string]any{
+		"request": requestContext(r),
+	}, a.GenRepImageOverrides)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
 func (a *App) ServiceWorkerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Service-Worker-Allowed", "/")
 	w.Header().Set("Cache-Control", "no-cache")
