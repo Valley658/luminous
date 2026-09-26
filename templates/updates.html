@@ -15,50 +15,92 @@
     <style>
         * { box-sizing: border-box; }
         body { align-items: stretch; }
-        .upd-page { width: 100%; max-width: 880px; margin: 96px auto 0; padding: 0 32px 70px; }
+        .upd-page { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 32px 80px; }
 
+        .upd-hero {
+            padding: 130px 0 44px;
+            background: radial-gradient(700px 260px at 50% 0%, rgba(56,189,248,.14), transparent 70%);
+            text-align: center;
+        }
         .upd-back {
             display: inline-flex; align-items: center; gap: 6px; color: #999; text-decoration: none;
-            font-size: 13.5px; font-weight: 600; padding: 6px 0; margin-bottom: 18px;
+            font-size: 13.5px; font-weight: 600; margin-bottom: 26px;
         }
         .upd-back:hover { color: #38bdf8; }
-
-        .page-title { padding: 4px 0 6px; }
-        .page-title h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; color: #fff; }
-        .page-title p { margin: 0; color: #999; font-size: 13.5px; }
-
-        .upd-group { margin-top: 40px; }
-        .upd-group:first-of-type { margin-top: 34px; }
-        .upd-row { display: grid; grid-template-columns: 96px 1fr; gap: 26px; align-items: start; }
-        .upd-date-col { position: sticky; top: 96px; padding-top: 2px; }
-        .upd-date-col .y { display: block; font-size: 12px; color: #666; font-weight: 600; }
-        .upd-date-col .md { display: block; font-size: 19px; color: #fff; font-weight: 800; margin-top: 2px; }
-
-        .upd-card {
-            background: #171717; border: 1px solid #262626; border-radius: 14px; padding: 18px 20px;
-            border-top: 3px solid #38bdf8;
+        .upd-hero h1 {
+            margin: 0 0 10px; font-size: 32px; font-weight: 900; color: #fff; letter-spacing: -.01em;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
         }
-        .upd-card.legacy { border-top-color: #555; }
+        .upd-hero p { margin: 0; color: #999; font-size: 14.5px; }
 
-        .upd-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-        .upd-list li { display: flex; gap: 10px; font-size: 14px; color: #ddd; line-height: 1.6; }
+        .upd-entry { position: relative; padding: 38px 0; border-bottom: 1px dashed #262626; }
+        .upd-entry:last-of-type { border-bottom: none; }
+
+        .upd-entry-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 6px; }
+        .upd-emoji {
+            flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; background: #1a1a1a; border: 1px solid #2a2a2a;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+        }
+        .upd-entry-titlewrap { min-width: 0; padding-top: 2px; }
+        .upd-entry-title { margin: 0; font-size: 18.5px; font-weight: 800; color: #fff; }
+        .upd-entry-date { display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #38bdf8; letter-spacing: .03em; }
+
+        .upd-entry-summary { margin: 14px 0 16px 56px; font-size: 13.5px; color: #999; line-height: 1.7; }
+
+        .upd-list { list-style: none; margin: 0 0 0 56px; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+        .upd-list li {
+            position: relative; padding-left: 18px; font-size: 14px; color: #ddd; line-height: 1.7;
+        }
+        .upd-list li::before {
+            content: ""; position: absolute; left: 0; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: #444;
+        }
+        .upd-list li.new::before { background: #38bdf8; }
+        .upd-list li.fix::before { background: #f87171; }
+        .upd-list li.improve::before { background: #4ade80; }
+        .upd-list li.security::before { background: #c084fc; }
+
         .upd-tag {
-            flex-shrink: 0; margin-top: 1px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
-            height: fit-content; white-space: nowrap;
+            display: inline-block; font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: 5px;
+            margin-right: 6px; vertical-align: 1px; letter-spacing: .02em;
         }
-        .upd-tag.new { background: rgba(56,189,248,.15); color: #38bdf8; }
-        .upd-tag.fix { background: rgba(248,113,113,.15); color: #f87171; }
-        .upd-tag.improve { background: rgba(74,222,128,.15); color: #4ade80; }
-        .upd-tag.security { background: rgba(192,132,252,.15); color: #c084fc; }
+        .upd-list li.new .upd-tag { background: rgba(56,189,248,.15); color: #38bdf8; }
+        .upd-list li.fix .upd-tag { background: rgba(248,113,113,.15); color: #f87171; }
+        .upd-list li.improve .upd-tag { background: rgba(74,222,128,.15); color: #4ade80; }
+        .upd-list li.security .upd-tag { background: rgba(192,132,252,.15); color: #c084fc; }
 
-        .upd-legacy-head { display: flex; align-items: center; gap: 10px; margin: 60px 0 16px; }
+        .upd-list li code {
+            background: #202020; border: 1px solid #2c2c2c; color: #ffd479; border-radius: 5px;
+            padding: 1px 6px; font-size: 12.5px; font-family: ui-monospace, "SF Mono", Consolas, monospace;
+        }
+        .upd-list li strong { color: #fff; font-weight: 700; }
+
+        .upd-legacy {
+            margin-top: 10px; padding-top: 44px;
+        }
+        .upd-legacy-head {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 22px; color: #777;
+        }
+        .upd-legacy-head i { font-size: 13px; }
+        .upd-legacy-head span { font-size: 13px; font-weight: 700; }
         .upd-legacy-head::after { content: ""; flex: 1; height: 1px; background: #262626; }
-        .upd-legacy-head span { font-size: 13px; font-weight: 700; color: #777; white-space: nowrap; }
+
+        .upd-legacy-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+        }
+        .upd-legacy-item {
+            display: flex; align-items: center; gap: 10px; background: #171717; border: 1px solid #262626;
+            border-radius: 10px; padding: 13px 14px; font-size: 13px; color: #bbb;
+        }
+        .upd-legacy-item i { color: #666; font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+        .upd-end { text-align: center; color: #555; font-size: 12.5px; padding: 48px 0 10px; }
 
         @media (max-width: 640px) {
-            .upd-page { padding: 0 16px 60px; }
-            .upd-row { grid-template-columns: 1fr; gap: 8px; }
-            .upd-date-col { position: static; display: flex; align-items: baseline; gap: 8px; }
+            .upd-page { padding: 0 18px 70px; }
+            .upd-hero { padding: 108px 0 34px; }
+            .upd-hero h1 { font-size: 25px; }
+            .upd-entry-summary, .upd-list { margin-left: 0; margin-top: 14px; }
+            .upd-legacy-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -73,78 +115,88 @@
     </header>
 
     <div class="upd-page">
-        <a class="upd-back" href="/"><i class="fas fa-arrow-left"></i> 메인으로 돌아가기</a>
-
-        <div class="page-title">
+        <div class="upd-hero">
+            <a class="upd-back" href="/"><i class="fas fa-arrow-left"></i> 메인으로 돌아가기</a>
             <h1><i class="fas fa-bullhorn" style="color:#38bdf8;"></i> 업데이트로그</h1>
-            <p>루미너스에 새로 추가되거나 개선된 내용을 여기서 확인할 수 있어요.</p>
+            <p>루미너스가 어떻게 자라고 있는지, 여기서 하나씩 기록하고 있어요.</p>
         </div>
 
-        <div class="upd-group">
-            <div class="upd-row">
-                <div class="upd-date-col"><span class="y">2026</span><span class="md">09.26</span></div>
-                <div class="upd-card">
-                    <ul class="upd-list">
-                        <li><span class="upd-tag new">추가</span> 이 업데이트로그 페이지를 새로 만들었어요.</li>
-                        <li><span class="upd-tag improve">개선</span> 유튜브 API 사용량이 일시적으로 초과돼도, 마지막으로 불러온 영상 목록이 계속 보이도록 개선했어요. 이전에는 서버가 재시작되면 목록이 잠깐 비어 보일 수 있었어요.</li>
-                        <li><span class="upd-tag fix">수정</span> 프로필 설정 화면에서 '루미너스란?' 버튼을 눌렀을 때 안내 창이 설정 창 뒤에 가려 보이던 문제를 고쳤어요. 이제 항상 위에 뜹니다.</li>
-                        <li><span class="upd-tag security">보안</span> 이미지/파일 업로드 검증을 강화해서, 가짜로 위장된 파일이 이미지인 척 올라가는 걸 막았어요.</li>
-                        <li><span class="upd-tag fix">수정</span> 디스코드봇에서 특정 키워드가 포함된 메시지를 자동으로 삭제하던 기능을 제거했어요.</li>
-                        <li><span class="upd-tag security">보안</span> 사이트 접속 보안(HTTPS/TLS)을 한 단계 더 강화했어요.</li>
-                    </ul>
+        <div class="upd-entry">
+            <div class="upd-entry-head">
+                <div class="upd-emoji">📣</div>
+                <div class="upd-entry-titlewrap">
+                    <h2 class="upd-entry-title">업데이트로그가 생겼어요</h2>
+                    <span class="upd-entry-date">2026년 9월 26일</span>
                 </div>
             </div>
+            <p class="upd-entry-summary">오늘은 이 페이지 자체를 만든 날이에요. 유튜브 할당량 이슈 개선, 보안 강화, 자잘한 버그 수정이 함께 있었어요.</p>
+            <ul class="upd-list">
+                <li class="new"><span class="upd-tag">NEW</span> 지금 보고 계신 <code>/updates</code> 페이지를 새로 만들었어요. 앞으로 변경사항은 여기 계속 쌓일 거예요.</li>
+                <li class="improve"><span class="upd-tag">IMPROVE</span> <strong>유튜브 API 할당량</strong>이 일시적으로 초과돼도 마지막으로 불러온 영상 목록이 계속 보이도록 개선했어요. 이전에는 서버가 재시작되면 목록이 잠깐 텅 비어 보일 수 있었어요.</li>
+                <li class="fix"><span class="upd-tag">FIX</span> 프로필 설정에서 <strong>'루미너스란?'</strong> 버튼을 눌렀을 때 안내 창이 설정 창 뒤에 가려 보이던 문제를 고쳤어요.</li>
+                <li class="security"><span class="upd-tag">SECURITY</span> 이미지/파일 업로드 검증을 강화해서 가짜로 위장된 파일이 이미지인 척 올라가는 걸 막았어요.</li>
+                <li class="fix"><span class="upd-tag">FIX</span> 디스코드봇의 <strong>AI 키워드 메시지 자동 삭제</strong> 기능을 제거했어요.</li>
+                <li class="security"><span class="upd-tag">SECURITY</span> 사이트 접속 보안(<code>HTTPS</code> / <code>TLS</code>)을 한 단계 더 강화했어요.</li>
+            </ul>
         </div>
 
-        <div class="upd-group">
-            <div class="upd-row">
-                <div class="upd-date-col"><span class="y">2026</span><span class="md">09.25</span></div>
-                <div class="upd-card">
-                    <ul class="upd-list">
-                        <li><span class="upd-tag new">추가</span> 비밀번호 찾기(재설정) 기능을 추가했어요.</li>
-                        <li><span class="upd-tag new">추가</span> 참여 포인트 시스템과 주간/월간 랭킹을 추가했어요.</li>
-                        <li><span class="upd-tag new">추가</span> 연속 출석 캘린더를 추가했어요.</li>
-                        <li><span class="upd-tag new">추가</span> 실시간 알림(알림 벨 + 드롭다운)을 추가했어요.</li>
-                        <li><span class="upd-tag new">추가</span> 주간 인기 콘텐츠를 메일로 받아볼 수 있는 이메일 다이제스트를 추가했어요.</li>
-                        <li><span class="upd-tag improve">개선</span> 루미(AI 마스코트)의 대화 품질과 정체성 응답을 개선했어요.</li>
-                        <li><span class="upd-tag security">보안</span> 반복 신고가 들어오는 사용자를 자동으로 플래그하는 기능을 추가했어요.</li>
-                        <li><span class="upd-tag security">보안</span> 로그인 무차별 대입 공격 방지, CSRF/Origin 검증 강화 등 로그인·요청 보안을 점검하고 강화했어요.</li>
-                        <li><span class="upd-tag security">보안</span> 사이트 전반의 XSS(악성 스크립트 삽입) 방어와 nginx 보안 헤더를 점검·강화했어요.</li>
-                        <li><span class="upd-tag security">보안</span> DB 자동 백업 기능을 추가했어요.</li>
-                    </ul>
+        <div class="upd-entry">
+            <div class="upd-entry-head">
+                <div class="upd-emoji">🚀</div>
+                <div class="upd-entry-titlewrap">
+                    <h2 class="upd-entry-title">참여 시스템 & 보안 대규모 업데이트</h2>
+                    <span class="upd-entry-date">2026년 9월 25일</span>
                 </div>
             </div>
+            <p class="upd-entry-summary">포인트, 랭킹, 출석, 알림처럼 자주 요청받던 기능들을 한 번에 추가하고, 로그인/요청 보안도 전체적으로 점검했어요.</p>
+            <ul class="upd-list">
+                <li class="new"><span class="upd-tag">NEW</span> <strong>비밀번호 찾기(재설정)</strong> 기능을 추가했어요.</li>
+                <li class="new"><span class="upd-tag">NEW</span> <strong>참여 포인트</strong>와 <strong>주간/월간 랭킹</strong>을 추가했어요.</li>
+                <li class="new"><span class="upd-tag">NEW</span> <strong>연속 출석 캘린더</strong>를 추가했어요.</li>
+                <li class="new"><span class="upd-tag">NEW</span> 알림 벨 아이콘으로 확인하는 <strong>실시간 알림</strong>을 추가했어요.</li>
+                <li class="new"><span class="upd-tag">NEW</span> 주간 인기 콘텐츠를 메일로 받아보는 <strong>이메일 다이제스트</strong>를 추가했어요.</li>
+                <li class="improve"><span class="upd-tag">IMPROVE</span> 루미(AI 마스코트)의 대화 품질과 정체성 응답을 다듬었어요.</li>
+                <li class="security"><span class="upd-tag">SECURITY</span> 반복 신고가 들어오는 사용자를 자동으로 플래그하는 기능을 추가했어요.</li>
+                <li class="security"><span class="upd-tag">SECURITY</span> 로그인 무차별 대입 공격 방지, <code>CSRF</code>/<code>Origin</code> 검증 강화 등 로그인·요청 보안을 점검했어요.</li>
+                <li class="security"><span class="upd-tag">SECURITY</span> 사이트 전반의 <strong>XSS</strong> 방어와 nginx 보안 헤더를 강화했어요.</li>
+                <li class="security"><span class="upd-tag">SECURITY</span> <strong>DB 자동 백업</strong> 기능을 추가했어요.</li>
+            </ul>
         </div>
 
-        <div class="upd-group">
-            <div class="upd-row">
-                <div class="upd-date-col"><span class="y">2026</span><span class="md">09.18</span></div>
-                <div class="upd-card">
-                    <ul class="upd-list">
-                        <li><span class="upd-tag new">추가</span> 루미 채팅에 코드블록/인라인 코드 마크다운 렌더링(글자 강조, 제목, 기울임 등)을 추가했어요.</li>
-                        <li><span class="upd-tag new">추가</span> 루미가 멤버 페어링 관련 질문에 나무위키를 조회해 답하도록 추가했어요.</li>
-                        <li><span class="upd-tag new">추가</span> 로그인한 사용자의 루미 대화 기록을 저장하고 다시 볼 수 있는 기능을 추가했어요.</li>
-                        <li><span class="upd-tag fix">수정</span> 루미 채팅 입력창이 가끔 잠기던 버그를 고쳤어요.</li>
-                        <li><span class="upd-tag improve">개선</span> 루미가 스스로를 로봇이라고 밝히거나 어색한 존댓말을 쓰던 부분을 다듬었어요.</li>
-                    </ul>
+        <div class="upd-entry">
+            <div class="upd-entry-head">
+                <div class="upd-emoji">💬</div>
+                <div class="upd-entry-titlewrap">
+                    <h2 class="upd-entry-title">루미 채팅 다듬기</h2>
+                    <span class="upd-entry-date">2026년 9월 18일</span>
                 </div>
             </div>
+            <p class="upd-entry-summary">루미와의 대화 경험을 손보고, 대화 기록을 남기기 시작했어요.</p>
+            <ul class="upd-list">
+                <li class="new"><span class="upd-tag">NEW</span> 루미 채팅에 코드블록/인라인 코드 등 <strong>마크다운 렌더링</strong>을 추가했어요.</li>
+                <li class="new"><span class="upd-tag">NEW</span> 루미가 멤버 페어링 관련 질문에 나무위키를 조회해서 답하도록 추가했어요.</li>
+                <li class="new"><span class="upd-tag">NEW</span> 로그인한 사용자의 <strong>루미 대화 기록 저장/조회</strong> 기능을 추가했어요.</li>
+                <li class="fix"><span class="upd-tag">FIX</span> 루미 채팅 입력창이 가끔 잠기던 버그를 고쳤어요.</li>
+                <li class="improve"><span class="upd-tag">IMPROVE</span> 루미가 스스로를 로봇이라 밝히거나 어색한 존댓말을 쓰던 부분을 다듬었어요.</li>
+            </ul>
         </div>
 
-        <div class="upd-legacy-head"><span>그 이전부터 있던 기능들</span></div>
-        <div class="upd-row" style="grid-template-columns: 1fr;">
-            <div class="upd-card legacy">
-                <ul class="upd-list">
-                    <li><span class="upd-tag new">기능</span> 영상 시청 페이지, 멤버별 채널 페이지, 검색/추천 기능</li>
-                    <li><span class="upd-tag new">기능</span> 커뮤니티 게시판, 댓글, 팬아트 갤러리</li>
-                    <li><span class="upd-tag new">기능</span> 하이라이트 클립 태그 및 모음 페이지</li>
-                    <li><span class="upd-tag new">기능</span> 재생목록, 북마크, 시청 기록</li>
-                    <li><span class="upd-tag new">기능</span> 루미(AI 챗봇) 마스코트</li>
-                    <li><span class="upd-tag new">기능</span> 팬 퀴즈</li>
-                    <li><span class="upd-tag new">기능</span> 디스코드봇 연동</li>
-                </ul>
+        <div class="upd-legacy">
+            <div class="upd-legacy-head"><i class="fas fa-box-archive"></i><span>그 이전부터 있던 기능들</span></div>
+            <div class="upd-legacy-grid">
+                <div class="upd-legacy-item"><i class="fas fa-play"></i> 영상 시청 / 멤버 채널 페이지</div>
+                <div class="upd-legacy-item"><i class="fas fa-magnifying-glass"></i> 검색 / 추천 영상</div>
+                <div class="upd-legacy-item"><i class="fas fa-comments"></i> 커뮤니티 게시판 / 댓글</div>
+                <div class="upd-legacy-item"><i class="fas fa-images"></i> 팬아트 갤러리</div>
+                <div class="upd-legacy-item"><i class="fas fa-scissors"></i> 하이라이트 클립</div>
+                <div class="upd-legacy-item"><i class="fas fa-list"></i> 재생목록 / 북마크 / 시청 기록</div>
+                <div class="upd-legacy-item"><i class="fas fa-robot"></i> 루미(AI 챗봇) 마스코트</div>
+                <div class="upd-legacy-item"><i class="fas fa-question-circle"></i> 팬 퀴즈</div>
+                <div class="upd-legacy-item"><i class="fab fa-discord"></i> 디스코드봇 연동</div>
             </div>
         </div>
+
+        <p class="upd-end">— 처음부터 여기까지 —</p>
     </div>
 </body>
 </html>
