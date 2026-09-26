@@ -25,16 +25,9 @@ const (
 var (
 	authorizedUserID string
 	testGuildID      string
-	aiModeratedGuild string
 )
 
 var managedServices = []string{"PastelliveApp", "NginxStartup"}
-
-var aiKeywords = []string{
-	"ai", "a.i", "claude", "클로드", "챗지피티", "챗gpt", "chatgpt", "gpt",
-	"gemini", "제미나이", "copilot", "코파일럿", "인공지능", "openai", "오픈ai",
-	"anthropic", "앤트로픽",
-}
 
 func main() {
 
@@ -56,7 +49,6 @@ func main() {
 
 	authorizedUserID = strings.TrimSpace(os.Getenv("DISCORD_AUTHORIZED_USER_ID"))
 	testGuildID = strings.TrimSpace(os.Getenv("DISCORD_GUILD_ID"))
-	aiModeratedGuild = testGuildID
 	if authorizedUserID == "" {
 		log.Println("[discordbot] 경고: DISCORD_AUTHORIZED_USER_ID가 설정되지 않음 - 관리자 전용 명령을 아무도 쓸 수 없습니다.")
 	}
@@ -79,10 +71,7 @@ func main() {
 		lastRestart:    map[string]time.Time{},
 		pending:        map[string]*pendingRestart{},
 	}
-	b.aiPattern = buildKeywordPattern(aiKeywords)
-
 	dg.AddHandler(b.onReady)
-	dg.AddHandler(b.onMessageCreate)
 	dg.AddHandler(b.onInteractionCreate)
 
 	if err := dg.Open(); err != nil {
@@ -106,7 +95,6 @@ type pendingRestart struct {
 type bot struct {
 	session        *discordgo.Session
 	alertChannelID string
-	aiPattern      []string
 
 	mu          sync.Mutex
 	lastRestart map[string]time.Time
@@ -334,19 +322,6 @@ func (b *bot) serviceWatchdogLoop() {
 	}
 }
 
-func (b *bot) onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author != nil && m.Author.Bot {
-		return
-	}
-	if m.GuildID == aiModeratedGuild && containsKeyword(m.Content, b.aiPattern) {
-		if err := s.ChannelMessageDelete(m.ChannelID, m.ID); err != nil {
-			log.Printf("[discordbot] AI 키워드 메세지 자동 삭제 실패 (channel=%s): %v\n", m.ChannelID, err)
-		} else {
-			log.Printf("[discordbot] AI 관련 키워드 메세지 자동 삭제 (guild=%s, channel=%s, author=%s)\n", m.GuildID, m.ChannelID, m.Author.ID)
-		}
-	}
-}
-
 func (b *bot) warnIfAlertChannelPublic() {
 	if b.alertChannelID == "" {
 		return
@@ -478,50 +453,6 @@ func isAllDigits(s string) bool {
 		}
 	}
 	return true
-}
-
-func buildKeywordPattern(keywords []string) []string {
-	out := make([]string, len(keywords))
-	for i, k := range keywords {
-		out[i] = strings.ToLower(k)
-	}
-	return out
-}
-
-func isAsciiAlnum(r rune) bool {
-	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
-}
-
-func containsKeyword(text string, keywords []string) bool {
-	lower := strings.ToLower(text)
-	runes := []rune(lower)
-	for _, kw := range keywords {
-		kwRunes := []rune(kw)
-		n := len(kwRunes)
-		if n == 0 {
-			continue
-		}
-		for start := 0; start+n <= len(runes); start++ {
-			match := true
-			for j := 0; j < n; j++ {
-				if runes[start+j] != kwRunes[j] {
-					match = false
-					break
-				}
-			}
-			if !match {
-				continue
-			}
-			if start > 0 && isAsciiAlnum(runes[start-1]) {
-				continue
-			}
-			if end := start + n; end < len(runes) && isAsciiAlnum(runes[end]) {
-				continue
-			}
-			return true
-		}
-	}
-	return false
 }
 
 func interactionUserID(i *discordgo.InteractionCreate) string {
