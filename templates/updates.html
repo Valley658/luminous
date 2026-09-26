@@ -22,38 +22,50 @@
 
         .upd-hero {
             padding: 100px 0 44px;
-            background: radial-gradient(700px 260px at 50% 0%, rgba(56,189,248,.14), transparent 70%);
+            background:
+                radial-gradient(600px 240px at 20% 0%, rgba(255,140,161,.16), transparent 70%),
+                radial-gradient(600px 240px at 80% 0%, rgba(173,151,243,.16), transparent 70%);
             text-align: center;
         }
         .upd-back {
             display: inline-flex; align-items: center; gap: 6px; color: #999; text-decoration: none;
             font-size: 13.5px; font-weight: 600; margin-bottom: 26px;
         }
-        .upd-back:hover { color: #38bdf8; }
+        .upd-back:hover { color: #ff8ca1; }
         .upd-hero h1 {
-            margin: 0 0 10px; font-size: 32px; font-weight: 900; color: #fff; letter-spacing: -.01em;
+            margin: 0 0 10px; font-size: 34px; font-weight: 900; letter-spacing: -.01em;
             display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .upd-hero h1 .upd-title-text {
+            background: linear-gradient(90deg, #ff8ca1, #ad97f3, #38bdf8);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
         }
         .upd-hero p { margin: 0; color: #999; font-size: 14.5px; }
 
         .upd-entry { position: relative; padding: 40px 0; }
         .upd-entry + .upd-entry::before {
             content: "✦"; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
-            color: #333; font-size: 13px; background: var(--bg-page, #0f0f0f); padding: 0 14px;
+            color: #444; font-size: 13px; background: var(--bg-page, #0f0f0f); padding: 0 14px;
         }
 
         .upd-entry-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 6px; }
         .upd-emoji {
-            flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; background: #1a1a1a; border: 1px solid #2a2a2a;
-            display: flex; align-items: center; justify-content: center; font-size: 20px;
+            flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px;
+            background: color-mix(in srgb, var(--upd-accent, #ff8ca1) 22%, #1a1a1a);
+            border: 1px solid color-mix(in srgb, var(--upd-accent, #ff8ca1) 45%, #1a1a1a);
+            display: flex; align-items: center; justify-content: center; font-size: 21px;
+            box-shadow: 0 4px 14px color-mix(in srgb, var(--upd-accent, #ff8ca1) 25%, transparent);
         }
         .upd-entry-titlewrap { min-width: 0; padding-top: 2px; }
         .upd-entry-title { margin: 0; font-size: 18.5px; font-weight: 800; color: #fff; }
-        .upd-entry-date { display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: #38bdf8; letter-spacing: .03em; }
+        .upd-entry-date {
+            display: block; margin-top: 3px; font-size: 12px; font-weight: 700;
+            color: var(--upd-accent, #ff8ca1); letter-spacing: .03em;
+        }
 
-        .upd-entry-summary { margin: 14px 0 16px 56px; font-size: 13.5px; color: #999; line-height: 1.7; }
+        .upd-entry-summary { margin: 14px 0 16px 58px; font-size: 13.5px; color: #999; line-height: 1.7; }
 
-        .upd-list { list-style: none; margin: 0 0 0 56px; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+        .upd-list { list-style: none; margin: 0 0 0 58px; padding: 0; display: flex; flex-direction: column; gap: 13px; }
         .upd-list li {
             position: relative; padding-left: 18px; font-size: 14px; color: #ddd; line-height: 1.7;
         }
@@ -97,7 +109,7 @@
             display: flex; align-items: center; gap: 10px; background: #171717; border: 1px solid #262626;
             border-radius: 10px; padding: 13px 14px; font-size: 13px; color: #bbb;
         }
-        .upd-legacy-item i { color: #666; font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+        .upd-legacy-item i { color: var(--upd-accent, #8fc6f8); font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
 
         .upd-end { text-align: center; color: #555; font-size: 12.5px; padding: 48px 0 10px; }
 
@@ -123,11 +135,11 @@
     <div class="upd-page">
         <div class="upd-hero">
             <a class="upd-back" href="/"><i class="fas fa-arrow-left"></i> 메인으로 돌아가기</a>
-            <h1><i class="fas fa-bullhorn" style="color:#38bdf8;"></i> 업데이트로그</h1>
+            <h1><i class="fas fa-bullhorn" style="color:#ff8ca1;"></i> <span class="upd-title-text">업데이트로그</span></h1>
             <p>루미너스가 어떻게 자라고 있는지, 여기서 하나씩 기록하고 있어요.</p>
         </div>
 
-        <div class="upd-entry">
+        <div class="upd-entry" style="--upd-accent:#ff8ca1;">
             <div class="upd-entry-head">
                 <div class="upd-emoji">📣</div>
                 <div class="upd-entry-titlewrap">
@@ -149,7 +161,7 @@
             </ul>
         </div>
 
-        <div class="upd-entry">
+        <div class="upd-entry" style="--upd-accent:#ad97f3;">
             <div class="upd-entry-head">
                 <div class="upd-emoji">🚀</div>
                 <div class="upd-entry-titlewrap">
@@ -172,7 +184,7 @@
             </ul>
         </div>
 
-        <div class="upd-entry">
+        <div class="upd-entry" style="--upd-accent:#8fc6f8;">
             <div class="upd-entry-head">
                 <div class="upd-emoji">💬</div>
                 <div class="upd-entry-titlewrap">
@@ -193,15 +205,15 @@
         <div class="upd-legacy">
             <div class="upd-legacy-head"><i class="fas fa-box-archive"></i><span>그 이전부터 있던 기능들</span></div>
             <div class="upd-legacy-grid">
-                <div class="upd-legacy-item"><i class="fas fa-play"></i> 영상 시청 / 멤버 채널 페이지</div>
-                <div class="upd-legacy-item"><i class="fas fa-magnifying-glass"></i> 검색 / 추천 영상</div>
-                <div class="upd-legacy-item"><i class="fas fa-comments"></i> 커뮤니티 게시판 / 댓글</div>
-                <div class="upd-legacy-item"><i class="fas fa-images"></i> 팬아트 갤러리</div>
-                <div class="upd-legacy-item"><i class="fas fa-scissors"></i> 하이라이트 클립</div>
-                <div class="upd-legacy-item"><i class="fas fa-list"></i> 재생목록 / 북마크 / 시청 기록</div>
-                <div class="upd-legacy-item"><i class="fas fa-robot"></i> 루미(AI 챗봇) 마스코트</div>
-                <div class="upd-legacy-item"><i class="fas fa-question-circle"></i> 팬 퀴즈</div>
-                <div class="upd-legacy-item"><i class="fab fa-discord"></i> 디스코드봇 연동</div>
+                <div class="upd-legacy-item" style="--upd-accent:#ff8ca1;"><i class="fas fa-play"></i> 영상 시청 / 멤버 채널 페이지</div>
+                <div class="upd-legacy-item" style="--upd-accent:#ad97f3;"><i class="fas fa-magnifying-glass"></i> 검색 / 추천 영상</div>
+                <div class="upd-legacy-item" style="--upd-accent:#8fc6f8;"><i class="fas fa-comments"></i> 커뮤니티 게시판 / 댓글</div>
+                <div class="upd-legacy-item" style="--upd-accent:#d9a441;"><i class="fas fa-images"></i> 팬아트 갤러리</div>
+                <div class="upd-legacy-item" style="--upd-accent:#8fe1b0;"><i class="fas fa-scissors"></i> 하이라이트 클립</div>
+                <div class="upd-legacy-item" style="--upd-accent:#d7c6e8;"><i class="fas fa-list"></i> 재생목록 / 북마크 / 시청 기록</div>
+                <div class="upd-legacy-item" style="--upd-accent:#857fd8;"><i class="fas fa-robot"></i> 루미(AI 챗봇) 마스코트</div>
+                <div class="upd-legacy-item" style="--upd-accent:#d0a382;"><i class="fas fa-question-circle"></i> 팬 퀴즈</div>
+                <div class="upd-legacy-item" style="--upd-accent:#4d7dcd;"><i class="fab fa-discord"></i> 디스코드봇 연동</div>
             </div>
         </div>
 
