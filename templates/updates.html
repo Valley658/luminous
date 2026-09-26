@@ -15,10 +15,13 @@
     <style>
         * { box-sizing: border-box; }
         body { align-items: stretch; }
+        /* 이 페이지에는 상단 공지바(fan-notice-bar)가 없어서, 헤더를 그 자리(top:32px)에 그대로 두면
+           스크롤 시 헤더 위쪽 32px 틈으로 뒤 콘텐츠가 살짝 비쳐 보임 - 헤더를 맨 위로 붙여서 막음. */
+        .header { top: 0 !important; }
         .upd-page { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 32px 80px; }
 
         .upd-hero {
-            padding: 130px 0 44px;
+            padding: 100px 0 44px;
             background: radial-gradient(700px 260px at 50% 0%, rgba(56,189,248,.14), transparent 70%);
             text-align: center;
         }
