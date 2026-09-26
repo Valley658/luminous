@@ -5301,15 +5301,14 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
 <script>
 (function () {
     var MEMBER_MUSIC = {{ MEMBER_MUSIC | tojson }};
-    // body 한 곳에만 사진을 깔아서 하나의 온전한 사진으로 보이게 함(사이드바/헤더처럼
-    // 작고 비율이 다른 요소들에도 각각 따로 채우면 사진이 조각조각 확대되어 잘려서
-    // 뭘 찍은 사진인지도 못 알아볼 정도로 이상하게 보였음). 그 외 요소들은 script.js가
-    // 칠한 단색을 지워서 원래 사이트 배경으로 되돌리고, 사진은 body에서만 은은하게 보임.
+    // body 한 곳에 사진을 깔고(조각조각 나눠 채우면 확대되어 이상해 보임), 영상
+    // 그리드를 감싸는 콘텐츠 영역들은 원래 칠해져 있던 불투명한 배경을 투명하게
+    // 만들어서 그 사이로 body의 사진이 실제로 비쳐 보이게 함(안 그러면 화면
+    // 대부분을 차지하는 콘텐츠 영역에 가려서 사진이 거의 안 보임). 사이드바/헤더는
+    // 가독성을 위해 원래 배경(script.js가 칠한 단색 or 기본 배경) 그대로 둠.
     var BG_PHOTO_SELECTOR = "body";
-    var BG_CLEAR_SELECTORS = [
-        ".sidebar", ".sidebar-scroll-area", ".pl-header", ".fixed-logo-area",
-        ".content", ".content-header", ".content-header-wrapper", ".tab-container"
-    ];
+    var BG_TRANSPARENT_SELECTORS = [".content", ".content-header", ".content-header-wrapper", ".tab-container"];
+    var BG_RESTORE_SELECTORS = [".sidebar", ".sidebar-scroll-area", ".pl-header", ".fixed-logo-area"];
 
     function applyMemberPhotoBackground(memberName) {
         var track = memberName ? MEMBER_MUSIC[memberName] : null;
@@ -5319,7 +5318,7 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
             if (img) {
                 el.style.setProperty(
                     "background-image",
-                    "linear-gradient(rgba(15,15,15,.65), rgba(15,15,15,.65)), url('" + img + "')",
+                    "linear-gradient(rgba(15,15,15,.6), rgba(15,15,15,.6)), url('" + img + "')",
                     "important"
                 );
                 el.style.setProperty("background-size", "cover", "important");
@@ -5335,8 +5334,20 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
             }
         });
 
+        BG_TRANSPARENT_SELECTORS.forEach(function (sel) {
+            document.querySelectorAll(sel).forEach(function (el) {
+                if (img) {
+                    el.style.setProperty("background-color", "transparent", "important");
+                    el.style.setProperty("background-image", "none", "important");
+                } else {
+                    el.style.removeProperty("background-color");
+                    el.style.removeProperty("background-image");
+                }
+            });
+        });
+
         if (img) {
-            BG_CLEAR_SELECTORS.forEach(function (sel) {
+            BG_RESTORE_SELECTORS.forEach(function (sel) {
                 document.querySelectorAll(sel).forEach(function (el) {
                     el.style.removeProperty("background-image");
                     el.style.removeProperty("background-color");
