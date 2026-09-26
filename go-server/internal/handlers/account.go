@@ -15,7 +15,7 @@ import (
 	"pastellive/internal/auth"
 	pdb "pastellive/internal/db"
 	"pastellive/internal/httputil"
-	"pastellive/internal/javaimage"
+	"pastellive/internal/imgvalidate"
 	"pastellive/internal/middleware"
 	"pastellive/internal/models"
 )
@@ -123,12 +123,10 @@ func (a *App) ApiUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if fh != nil {
-		ext := ""
-		if idx := strings.LastIndex(fh.Filename, "."); idx != -1 {
-			ext = strings.ToLower(fh.Filename[idx+1:])
-		}
-		if !javaimage.IsAllowedImageExt(ext) {
-			httputil.JSONError(w, http.StatusBadRequest, "jpg/png/webp/gif/heic 이미지 파일만 업로드할 수 있습니다.")
+		// [2026-09-26 보안 점검] 확장자/Content-Type을 신뢰하지 않고
+		// imgvalidate가 실제 파일 내용을 검증/재인코딩한다.
+		if fh.Size <= 0 || fh.Size > maxUploadImageBytes {
+			httputil.JSONError(w, http.StatusBadRequest, "이미지 파일 크기가 올바르지 않습니다(최대 15MB).")
 			return
 		}
 		userFolder := filepath.Join(a.Cfg.StaticDir, "uploads", "profiles", fmt.Sprintf("%d", userID))
@@ -136,18 +134,20 @@ func (a *App) ApiUpdateProfileHandler(w http.ResponseWriter, r *http.Request) {
 			httputil.JSONError(w, http.StatusInternalServerError, "처리 중 오류가 발생했습니다.")
 			return
 		}
-		filename := fmt.Sprintf("profile_%s.%s", randomHex(4), ext)
-		savedPath := filepath.Join(userFolder, filename)
-		if err := saveMultipartFileTo(fh, savedPath); err != nil {
+		tmpPath := filepath.Join(userFolder, ".upload_"+imgvalidate.RandomBaseName("tmp", 16))
+		if err := saveMultipartFileTo(fh, tmpPath); err != nil {
 			httputil.JSONError(w, http.StatusInternalServerError, "처리 중 오류가 발생했습니다.")
 			return
 		}
-		finalProfilePath := savedPath
-		if newPath, ok, rejected := a.JavaImage.ProcessUploadedImage(savedPath, 512, 85); rejected {
-			_ = os.Remove(savedPath)
-			httputil.JSONError(w, http.StatusBadRequest, "올바른 이미지 파일이 아닙니다.")
+		validated, err := imgvalidate.ValidateAndReencode(tmpPath, userFolder, imgvalidate.RandomBaseName("profile", 8), 88)
+		_ = os.Remove(tmpPath)
+		if err != nil {
+			httputil.JSONError(w, http.StatusBadRequest, "올바른 이미지 파일이 아닙니다(jpg/png/webp/gif만 허용).")
 			return
-		} else if ok && newPath != "" {
+		}
+		finalProfilePath := validated.Path
+		filename := filepath.Base(finalProfilePath)
+		if newPath, ok, optimized := a.JavaImage.ProcessUploadedImage(finalProfilePath, 512, 85); optimized && ok && newPath != "" {
 			filename = filepath.Base(newPath)
 			finalProfilePath = newPath
 		}

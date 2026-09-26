@@ -46,8 +46,8 @@ func (a *App) backfillConvertOne(relURL string, maxDimension, quality int) (newU
 	if _, err := os.Stat(absPath); err != nil {
 		return relURL, "skip_file_missing"
 	}
-	newPath, ok, rejected := a.JavaImage.ProcessUploadedImage(absPath, maxDimension, quality)
-	if rejected || !ok || newPath == "" {
+	newPath, ok, optimized := a.JavaImage.ProcessUploadedImage(absPath, maxDimension, quality)
+	if !optimized || !ok || newPath == "" {
 		return relURL, "failed_conversion"
 	}
 	return strings.TrimSuffix(relURL, filepath.Ext(relURL)) + ".webp", "converted"

@@ -2,18 +2,17 @@ package handlers
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"pastellive/internal/httputil"
+	"pastellive/internal/imgvalidate"
 	"pastellive/internal/middleware"
 	"pastellive/internal/models"
 )
@@ -90,10 +89,6 @@ func (a *App) ApiGetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"success": true, "comments": comments})
 }
 
-var commentImageAllowedExt = map[string]bool{
-	"jpg": true, "jpeg": true, "png": true, "webp": true, "gif": true, "heic": true, "heif": true,
-}
-
 func (a *App) ApiAddCommentHandler(w http.ResponseWriter, r *http.Request) {
 	videoID := chi.URLParam(r, "videoID")
 	sess := middleware.GetSession(r)
@@ -148,12 +143,12 @@ func (a *App) ApiAddCommentHandler(w http.ResponseWriter, r *http.Request) {
 	if isMultipart && r.MultipartForm != nil {
 		if files := r.MultipartForm.File["image"]; len(files) > 0 && files[0].Filename != "" {
 			fh := files[0]
-			ext := ""
-			if idx := strings.LastIndex(fh.Filename, "."); idx != -1 {
-				ext = strings.ToLower(fh.Filename[idx+1:])
-			}
-			if !commentImageAllowedExt[ext] {
-				writeJSON(w, map[string]any{"success": false, "message": "이미지는 jpg/png/webp/gif/heic 형식만 업로드할 수 있습니다."})
+			// [2026-09-26 보안 점검] 확장자/Content-Type을 신뢰하지 않고,
+			// gif든 아니든 예외 없이 imgvalidate로 매직바이트+전체 디코드
+			// 검증 후 재인코딩된 파일만 사용한다 (예전엔 gif 확장자면
+			// 이 검증을 통째로 건너뛰고 원본을 그대로 저장/서빙했음).
+			if fh.Size <= 0 || fh.Size > maxUploadImageBytes {
+				writeJSON(w, map[string]any{"success": false, "message": "이미지 파일 크기가 올바르지 않습니다(최대 15MB)."})
 				return
 			}
 			uploadDir := filepath.Join(a.Cfg.StaticDir, "uploads", "comments")
@@ -161,23 +156,24 @@ func (a *App) ApiAddCommentHandler(w http.ResponseWriter, r *http.Request) {
 				httputil.JSONError(w, http.StatusInternalServerError, "처리 중 오류가 발생했습니다.")
 				return
 			}
-			filename := fmt.Sprintf("%s_%s", time.Now().Format("20060102150405"), secureFilename(fh.Filename))
-			savePath := filepath.Join(uploadDir, filename)
-			if err := saveMultipartFileTo(fh, savePath); err != nil {
+			tmpPath := filepath.Join(uploadDir, ".upload_"+imgvalidate.RandomBaseName("tmp", 16))
+			if err := saveMultipartFileTo(fh, tmpPath); err != nil {
 				httputil.JSONError(w, http.StatusInternalServerError, "처리 중 오류가 발생했습니다.")
 				return
 			}
-			if ext == "gif" {
-
+			validated, verr := imgvalidate.ValidateAndReencode(tmpPath, uploadDir, imgvalidate.RandomBaseName("comment", 16), 88)
+			_ = os.Remove(tmpPath)
+			if verr != nil {
+				writeJSON(w, map[string]any{"success": false, "message": "올바른 이미지 파일이 아닙니다(jpg/png/webp/gif만 허용)."})
+				return
+			}
+			filename := filepath.Base(validated.Path)
+			if validated.Format == "gif" {
 				imageURL = sql.NullString{String: "/static/uploads/comments/" + filename, Valid: true}
-				queuedGifPath = savePath
+				queuedGifPath = validated.Path
 			} else {
-				finalCommentImgPath := savePath
-				if newPath, ok, rejected := a.JavaImage.ProcessUploadedImage(savePath, 1920, 85); rejected {
-					_ = os.Remove(savePath)
-					writeJSON(w, map[string]any{"success": false, "message": "올바른 이미지 파일이 아닙니다."})
-					return
-				} else if ok && newPath != "" {
+				finalCommentImgPath := validated.Path
+				if newPath, ok, optimized := a.JavaImage.ProcessUploadedImage(finalCommentImgPath, 1920, 85); optimized && ok && newPath != "" {
 					filename = filepath.Base(newPath)
 					finalCommentImgPath = newPath
 				}

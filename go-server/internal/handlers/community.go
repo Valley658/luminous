@@ -13,11 +13,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"pastellive/internal/httputil"
+	"pastellive/internal/imgvalidate"
 	"pastellive/internal/javaimage"
 	"pastellive/internal/middleware"
 	"pastellive/internal/models"
@@ -117,11 +117,11 @@ func communityImageAllowedExt(ext string) bool {
 }
 
 func (a *App) saveAndProcessCommunityImage(fh *multipart.FileHeader) (webPath string, rejected bool, err error) {
-	ext := ""
-	if idx := strings.LastIndex(fh.Filename, "."); idx != -1 {
-		ext = strings.ToLower(fh.Filename[idx+1:])
-	}
-	if !communityImageAllowedExt(ext) {
+	// [2026-09-26 보안 점검] 확장자/Content-Type은 신뢰하지 않는다 - 빠른
+	// UX용 사전 필터로만 쓰고, 실제 보안 검증은 imgvalidate가 담당한다.
+	// 파일명도 더 이상 사용자 filename에서 파생하지 않고 crypto-random으로만
+	// 만든다(예전엔 time.Now()+secureFilename(원본 파일명) 조합이었음).
+	if fh.Size <= 0 || fh.Size > maxUploadImageBytes {
 		return "", true, nil
 	}
 
@@ -129,29 +129,32 @@ func (a *App) saveAndProcessCommunityImage(fh *multipart.FileHeader) (webPath st
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		return "", false, err
 	}
-	filename := fmt.Sprintf("%s_%s", time.Now().Format("20060102150405"), secureFilename(fh.Filename))
-	savePath := filepath.Join(uploadDir, filename)
+	tmpPath := filepath.Join(uploadDir, ".upload_"+imgvalidate.RandomBaseName("tmp", 16))
 
 	src, err := fh.Open()
 	if err != nil {
 		return "", false, err
 	}
 	defer src.Close()
-	dst, err := os.Create(savePath)
+	dst, err := os.Create(tmpPath)
 	if err != nil {
 		return "", false, err
 	}
 	if _, err := io.Copy(dst, src); err != nil {
 		dst.Close()
+		_ = os.Remove(tmpPath)
 		return "", false, err
 	}
 	dst.Close()
 
-	finalPath := savePath
-	if newPath, ok, rej := a.JavaImage.ProcessUploadedImage(savePath, 1920, 85); rej {
-		_ = os.Remove(savePath)
+	validated, verr := imgvalidate.ValidateAndReencode(tmpPath, uploadDir, imgvalidate.RandomBaseName("community", 16), 88)
+	_ = os.Remove(tmpPath)
+	if verr != nil {
 		return "", true, nil
-	} else if ok && newPath != "" {
+	}
+	finalPath := validated.Path
+
+	if newPath, ok, optimized := a.JavaImage.ProcessUploadedImage(finalPath, 1920, 85); optimized && ok && newPath != "" {
 		finalPath = newPath
 	}
 
@@ -228,7 +231,7 @@ func (a *App) CreateCommunityPostHandler(w http.ResponseWriter, r *http.Request)
 				return
 			}
 			if rejected {
-				writeJSON(w, map[string]any{"success": false, "message": "이미지는 jpg/png/webp/gif/heic 형식만 업로드할 수 있습니다."})
+				writeJSON(w, map[string]any{"success": false, "message": "올바른 이미지 파일이 아닙니다(jpg/png/webp/gif만 허용)."})
 				return
 			}
 			imagePaths = append(imagePaths, webPath)

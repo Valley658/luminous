@@ -17,10 +17,15 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"pastellive/internal/httputil"
-	"pastellive/internal/javaimage"
+	"pastellive/internal/imgvalidate"
 	"pastellive/internal/middleware"
 	"pastellive/internal/models"
 )
+
+// maxUploadImageBytes: 이미지 업로드 하나의 최대 허용 크기(원본 bytes 기준).
+// [2026-09-26 보안 점검] fanart/profile/community/comment 이미지 업로드
+// 전부 이 상수를 공유한다.
+const maxUploadImageBytes = 15 << 20 // 15MB
 
 func strToNull(s string) sql.NullString {
 	if s == "" {
@@ -62,12 +67,12 @@ func (a *App) ApiUploadFanartHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	description := strings.TrimSpace(sanitizeUserHTML(r.FormValue("description")))
 
-	ext := ""
-	if idx := strings.LastIndex(fh.Filename, "."); idx != -1 {
-		ext = strings.ToLower(fh.Filename[idx+1:])
-	}
-	if !javaimage.IsAllowedImageExt(ext) {
-		httputil.JSONError(w, http.StatusBadRequest, "jpg/png/webp/gif/heic 이미지 파일만 업로드할 수 있습니다.")
+	// [2026-09-26 보안 점검] 클라이언트가 보낸 filename 확장자/Content-Type은
+	// 신뢰하지 않는다 - 검증되기 전까지는 힌트일 뿐이다. 실제 accept/reject
+	// 판단은 아래 imgvalidate.ValidateAndReencode (매직 바이트 감지 + 전체
+	// 디코드 + 재인코딩)가 전담한다.
+	if fh.Size <= 0 || fh.Size > maxUploadImageBytes {
+		httputil.JSONError(w, http.StatusBadRequest, "이미지 파일 크기가 올바르지 않습니다(최대 15MB).")
 		return
 	}
 
@@ -76,18 +81,22 @@ func (a *App) ApiUploadFanartHandler(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, http.StatusInternalServerError, "업로드 처리 중 오류가 발생했습니다.")
 		return
 	}
-	filename := fmt.Sprintf("fanart_%s.%s", randomHex(16), ext)
-	filePath := filepath.Join(imagesDir, filename)
-	if err := saveMultipartFileTo(fh, filePath); err != nil {
+	tmpPath := filepath.Join(imagesDir, ".upload_"+imgvalidate.RandomBaseName("tmp", 16))
+	if err := saveMultipartFileTo(fh, tmpPath); err != nil {
 		httputil.JSONError(w, http.StatusInternalServerError, "업로드 처리 중 오류가 발생했습니다.")
 		return
 	}
 
-	if newPath, ok, rejected := a.JavaImage.ProcessUploadedImage(filePath, 1920, 85); rejected {
-		_ = os.Remove(filePath)
-		httputil.JSONError(w, http.StatusBadRequest, "올바른 이미지 파일이 아닙니다.")
+	validated, err := imgvalidate.ValidateAndReencode(tmpPath, imagesDir, imgvalidate.RandomBaseName("fanart", 16), 88)
+	_ = os.Remove(tmpPath)
+	if err != nil {
+		httputil.JSONError(w, http.StatusBadRequest, "올바른 이미지 파일이 아닙니다(jpg/png/webp/gif만 허용).")
 		return
-	} else if ok && newPath != "" {
+	}
+	filePath := validated.Path
+	filename := filepath.Base(filePath)
+
+	if newPath, ok, optimized := a.JavaImage.ProcessUploadedImage(filePath, 1920, 85); optimized && ok && newPath != "" {
 		filePath = newPath
 		filename = filepath.Base(filePath)
 	}
