@@ -5292,6 +5292,54 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
 })();
 </script>
 
+<!-- 멤버 선택 시 배경: 원래 script.js가 멤버별 "퍼스널 컬러" 단색 배경을
+     body/사이드바/헤더 등에 인라인 !important로 직접 칠하는데(그 파일은 배포
+     방식이 달라 직접 수정 불가), static/music/<멤버>/ 에 사진이 있는 멤버는
+     그 단색 대신 사진을 옅게(약 35% 정도만 보이게 어두운 스크림을 겹쳐서)
+     깔아주도록, 같은 클릭 이벤트가 버블링되는 시점에 인라인 스타일을 다시
+     덮어씀(인라인 !important는 인라인 !important로만 덮어쓸 수 있음). -->
+<script>
+(function () {
+    var MEMBER_MUSIC = {{ MEMBER_MUSIC | tojson }};
+    var BG_TARGET_SELECTORS = [
+        "body", ".sidebar", ".sidebar-scroll-area", ".pl-header", ".fixed-logo-area",
+        ".content", ".content-header", ".content-header-wrapper", ".tab-container"
+    ];
+
+    function applyMemberPhotoBackground(memberName) {
+        var track = memberName ? MEMBER_MUSIC[memberName] : null;
+        var img = track && track.img;
+        BG_TARGET_SELECTORS.forEach(function (sel) {
+            document.querySelectorAll(sel).forEach(function (el) {
+                if (img) {
+                    el.style.setProperty(
+                        "background-image",
+                        "linear-gradient(rgba(15,15,15,.65), rgba(15,15,15,.65)), url('" + img + "')",
+                        "important"
+                    );
+                    el.style.setProperty("background-size", "cover", "important");
+                    el.style.setProperty("background-position", "center", "important");
+                    el.style.setProperty("background-repeat", "no-repeat", "important");
+                } else {
+                    el.style.removeProperty("background-image");
+                    el.style.removeProperty("background-size");
+                    el.style.removeProperty("background-position");
+                    el.style.removeProperty("background-repeat");
+                }
+            });
+        });
+    }
+
+    document.addEventListener("click", function (e) {
+        var item = e.target.closest(".nav-item");
+        if (!item) return;
+        var name = item.dataset.memberName;
+        if (!name) return;
+        applyMemberPhotoBackground(MEMBER_MUSIC[name] ? name : null);
+    });
+})();
+</script>
+
 <!-- 유튜브 API 할당량 소진 안내 배너: script.js가 /api/videos/... 를 호출해서
      영상 목록/페이지네이션을 불러오는데, 그 응답에 quota_limited가 실려오면
      "지금 일부 영상만 보이는 중" 이라고 알려줌. script.js 자체는 배포 방식이
