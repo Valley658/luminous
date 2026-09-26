@@ -54,7 +54,14 @@ func (a *App) StartBackgroundScheduler() {
 		return
 	}
 
-	runEvery(30*time.Minute, false, func() {
+	// [2026-09-26] immediate=false였을 때는 서버 재시작 후 최초 30분 동안 진짜
+	// 갱신이 한 번도 안 일어났다. 디스크 캐시(video.Pool의 cachePath)가 마침
+	// 영상이 몇 개 안 되는 상태로 저장돼 있었다면(예: 이전 실행 중 일시적으로
+	// 소수의 멤버만 응답했을 때), RefreshIfEmpty도 "풀이 비어있지 않다"며
+	// 재시도를 안 하기 때문에 그 부실한 목록이 30분 내내 그대로 노출됐다.
+	// immediate=true로 바꿔서 서버가 뜨자마자 진짜 갱신을 한 번 시도하게 한다
+	// (디스크 캐시는 그 갱신이 끝나기 전 짧은 순간에만 보여주는 용도가 맞다).
+	runEvery(30*time.Minute, true, func() {
 		a.VideoPool.Refresh(context.Background(), a.DB, a.Cfg.YoutubeAPIKey)
 	})
 	runEvery(20*time.Second, true, a.refreshAndBroadcastLiveStatus)
