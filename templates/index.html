@@ -5231,7 +5231,7 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
 <script>
 (function () {
     var MEMBER_MUSIC = {{ MEMBER_MUSIC | tojson }};
-    var BGMUSIC_VOLUME = 0.22; // 배경음악답게 작게. 사용자가 뮤트 버튼으로 끌 수 있음.
+    var BGMUSIC_VOLUME = 0.1; // 배경음악답게 아주 작게. 사용자가 뮤트 버튼으로 끌 수 있음.
     var btn = document.getElementById("bgMusicMuteBtn");
     if (!btn || Object.keys(MEMBER_MUSIC).length === 0) {
         if (btn) btn.style.display = "none";
@@ -5278,13 +5278,15 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
         if (!item) return;
         var name = item.dataset.memberName;
         if (!name) return;
-        if (name === "스텔라이브") {
+        if (!MEMBER_MUSIC[name]) {
+            // 개인곡이 없는 대상(스텔라이브 전체보기, 강지, 김블루, 기수 그룹 등)을
+            // 선택하면 재생 중이던 곡도 멈춤.
             audio.pause();
             btn.classList.remove("visible");
             currentTrackMember = null;
             return;
         }
-        if (!MEMBER_MUSIC[name] || name === currentTrackMember) return;
+        if (name === currentTrackMember) return;
         loadTrack(name);
     });
 })();
