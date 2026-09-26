@@ -5301,33 +5301,48 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
 <script>
 (function () {
     var MEMBER_MUSIC = {{ MEMBER_MUSIC | tojson }};
-    var BG_TARGET_SELECTORS = [
-        "body", ".sidebar", ".sidebar-scroll-area", ".pl-header", ".fixed-logo-area",
+    // body 한 곳에만 사진을 깔아서 하나의 온전한 사진으로 보이게 함(사이드바/헤더처럼
+    // 작고 비율이 다른 요소들에도 각각 따로 채우면 사진이 조각조각 확대되어 잘려서
+    // 뭘 찍은 사진인지도 못 알아볼 정도로 이상하게 보였음). 그 외 요소들은 script.js가
+    // 칠한 단색을 지워서 원래 사이트 배경으로 되돌리고, 사진은 body에서만 은은하게 보임.
+    var BG_PHOTO_SELECTOR = "body";
+    var BG_CLEAR_SELECTORS = [
+        ".sidebar", ".sidebar-scroll-area", ".pl-header", ".fixed-logo-area",
         ".content", ".content-header", ".content-header-wrapper", ".tab-container"
     ];
 
     function applyMemberPhotoBackground(memberName) {
         var track = memberName ? MEMBER_MUSIC[memberName] : null;
         var img = track && track.img;
-        BG_TARGET_SELECTORS.forEach(function (sel) {
-            document.querySelectorAll(sel).forEach(function (el) {
-                if (img) {
-                    el.style.setProperty(
-                        "background-image",
-                        "linear-gradient(rgba(15,15,15,.65), rgba(15,15,15,.65)), url('" + img + "')",
-                        "important"
-                    );
-                    el.style.setProperty("background-size", "cover", "important");
-                    el.style.setProperty("background-position", "center", "important");
-                    el.style.setProperty("background-repeat", "no-repeat", "important");
-                } else {
-                    el.style.removeProperty("background-image");
-                    el.style.removeProperty("background-size");
-                    el.style.removeProperty("background-position");
-                    el.style.removeProperty("background-repeat");
-                }
-            });
+
+        document.querySelectorAll(BG_PHOTO_SELECTOR).forEach(function (el) {
+            if (img) {
+                el.style.setProperty(
+                    "background-image",
+                    "linear-gradient(rgba(15,15,15,.65), rgba(15,15,15,.65)), url('" + img + "')",
+                    "important"
+                );
+                el.style.setProperty("background-size", "cover", "important");
+                el.style.setProperty("background-position", "center 20%", "important");
+                el.style.setProperty("background-repeat", "no-repeat", "important");
+                el.style.setProperty("background-attachment", "fixed", "important");
+            } else {
+                el.style.removeProperty("background-image");
+                el.style.removeProperty("background-size");
+                el.style.removeProperty("background-position");
+                el.style.removeProperty("background-repeat");
+                el.style.removeProperty("background-attachment");
+            }
         });
+
+        if (img) {
+            BG_CLEAR_SELECTORS.forEach(function (sel) {
+                document.querySelectorAll(sel).forEach(function (el) {
+                    el.style.removeProperty("background-image");
+                    el.style.removeProperty("background-color");
+                });
+            });
+        }
     }
 
     document.addEventListener("click", function (e) {
