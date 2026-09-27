@@ -184,6 +184,12 @@ func main() {
 	if err := models.InitMySQLMissingTables(database); err != nil {
 		log.Fatalf("MySQL 누락 테이블 초기화 실패: %v", err)
 	}
+	// [2026-09-27: user_login_log가 생기기 전부터 로그인해있던 회원은 실제로
+	// 다시 로그인하기 전까진 이력이 안 쌓여서 관리자 화면에 "접속 기록 없음"만
+	// 보이는 문제 - users.last_ip로 이력 1건을 소급 채워준다.]
+	if err := models.BackfillUserLoginLogFromLastIP(database); err != nil {
+		log.Printf("접속 IP 이력 소급 채우기 실패(치명적이지 않음): %v", err)
+	}
 	if err := models.InitMembersTable(database); err != nil {
 		log.Fatalf("members 테이블 초기화 실패: %v", err)
 	}

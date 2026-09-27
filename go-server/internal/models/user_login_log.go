@@ -69,6 +69,22 @@ func GetUserLoginHistory(d *pdb.DB, userID int64, limit int) ([]UserLoginLogEntr
 	return out, rows.Err()
 }
 
+// BackfillUserLoginLogFromLastIP: 이 기능(user_login_log)이 생기기 전부터
+// 로그인해있던 회원들은 세션 쿠키로 계속 로그인 상태를 유지하고 있어서
+// 실제로 "다시 로그인"하기 전까진 이력이 하나도 안 쌓인다 - 그 사이엔 관리자
+// 화면에 "접속 기록이 없습니다"만 뜨게 되어 혼란스러우므로, users.last_ip에
+// 이미 저장돼 있던 값으로 이력 1건을 소급 생성해준다. user_login_log에 해당
+// 유저 행이 하나도 없을 때만 채우는 멱등 작업이라 서버 재시작마다 실행해도
+// 안전하다.
+func BackfillUserLoginLogFromLastIP(d *pdb.DB) error {
+	_, err := d.Exec(`INSERT INTO user_login_log (user_id, ip_address, created_at)
+		SELECT u.id, u.last_ip, COALESCE(u.updated_at, u.created_at)
+		FROM users u
+		WHERE u.last_ip IS NOT NULL AND u.last_ip != ''
+		AND NOT EXISTS (SELECT 1 FROM user_login_log l WHERE l.user_id = u.id)`)
+	return err
+}
+
 func DeleteOldUserLoginLog(d *pdb.DB, retainDays int) (int64, error) {
 	cutoffExpr := "datetime('now','localtime','-" + strconv.Itoa(retainDays) + " days')"
 	if d.Backend == "mysql" {

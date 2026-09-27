@@ -280,6 +280,7 @@ var adminDBOverviewGroups = []struct {
 	{"댓글 · 채팅", []string{"video_comments", "comment_likes", "live_cheers"}},
 	{"커뮤니티", []string{"community_posts", "community_comments", "community_likes"}},
 	{"시스템 · 운영", []string{"search_trends", "member_schedules", "admin_audit_log"}},
+	{"트래픽 · 보안", []string{"page_views", "user_login_log", "banned_ips"}},
 }
 
 func GetAdminDBOverview(d *pdb.DB) []AdminDBOverviewGroup {
