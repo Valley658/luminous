@@ -5321,16 +5321,22 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
                     "linear-gradient(rgba(15,15,15,.6), rgba(15,15,15,.6)), url('" + img + "')",
                     "important"
                 );
-                el.style.setProperty("background-size", "cover", "important");
-                el.style.setProperty("background-position", "center 20%", "important");
+                // [2026-09-27] cover로 하면 사진의 흰 여백/가장자리가 잘려서 얼굴/손 등
+                // 일부만 확대되어 보이는 문제가 있었음(유저 피드백) -> contain으로 바꿔서
+                // 사진 전체(흰 부분 포함)가 잘리지 않고 다 보이게 함. 대신 레터박스(빈
+                // 공간)가 생기는데, 그 부분은 사이트 어두운 배경색으로 자연스럽게 채움.
+                el.style.setProperty("background-size", "contain", "important");
+                el.style.setProperty("background-position", "center center", "important");
                 el.style.setProperty("background-repeat", "no-repeat", "important");
                 el.style.setProperty("background-attachment", "fixed", "important");
+                el.style.setProperty("background-color", "#0f0f0f", "important");
             } else {
                 el.style.removeProperty("background-image");
                 el.style.removeProperty("background-size");
                 el.style.removeProperty("background-position");
                 el.style.removeProperty("background-repeat");
                 el.style.removeProperty("background-attachment");
+                el.style.removeProperty("background-color");
             }
         });
 
