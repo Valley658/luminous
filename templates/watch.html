@@ -409,6 +409,40 @@
         })();
         </script>
 
+        <!-- [2026-09-27] "유튜브 댓글 가져오기" 탭에서 할당량 초과로 실패해도
+             watch.js(직접 수정 불가)는 그냥 "불러올 유튜브 댓글이 없습니다."라는
+             일반 문구만 보여줘서 유저가 원인을 알 수 없었음. fetch 응답을 관찰해서
+             할당량 초과가 맞으면 그 문구를 원인이 드러나는 문구로 바꿔치기함. -->
+        <script>
+        (function () {
+            if (typeof window.fetch !== "function") return;
+            var originalFetch = window.fetch;
+            window.fetch = function (input, init) {
+                return originalFetch.apply(this, arguments).then(function (response) {
+                    try {
+                        var url = typeof input === "string" ? input : (input && input.url) || "";
+                        if (url.indexOf("/api/youtube_comments/") !== -1 && response.ok) {
+                            response.clone().json().then(function (data) {
+                                if (!data || !data.quota_exceeded) return;
+                                setTimeout(function () {
+                                    var container = document.getElementById("commentContainer");
+                                    if (!container) return;
+                                    container.querySelectorAll("div").forEach(function (el) {
+                                        if (el.textContent && el.textContent.indexOf("불러올 유튜브 댓글이 없습니다") !== -1) {
+                                            el.textContent = "⚠️ 유튜브 서버 할당량이 초과되어 댓글을 일시적으로 불러올 수 없습니다." +
+                                                (data.quota_reset_kst_label ? " (한국시간 " + data.quota_reset_kst_label + "경 자동 해결)" : "");
+                                        }
+                                    });
+                                }, 200);
+                            }).catch(function () {});
+                        }
+                    } catch (e) {}
+                    return response;
+                });
+            };
+        })();
+        </script>
+
         <div class="recommend-sidebar">
             <div>
                 <p class="section-title">추천 Shorts</p>

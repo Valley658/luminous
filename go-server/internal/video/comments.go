@@ -18,10 +18,12 @@ type YouTubeComment struct {
 }
 
 type YouTubeCommentsResult struct {
-	Success       bool             `json:"success"`
-	Comments      []YouTubeComment `json:"comments"`
-	NextPageToken string           `json:"nextPageToken,omitempty"`
-	Message       string           `json:"message,omitempty"`
+	Success         bool             `json:"success"`
+	Comments        []YouTubeComment `json:"comments"`
+	NextPageToken   string           `json:"nextPageToken,omitempty"`
+	Message         string           `json:"message,omitempty"`
+	QuotaExceeded   bool             `json:"quota_exceeded,omitempty"`
+	QuotaResetLabel string           `json:"quota_reset_kst_label,omitempty"`
 }
 
 type ytCommentThreadsResponse struct {
@@ -61,6 +63,20 @@ func FetchYouTubeComments(ctx context.Context, videoID, pageToken, apiKey string
 		maxResults = 30
 	}
 
+	// [2026-09-27] 이미 할당량 초과 상태로 파악된 경우엔 API를 또 호출해서 실패
+	// 응답을 기다릴 필요 없이 바로 안내 문구를 내려줌 (watch 페이지에서 "댓글을
+	// 불러오지 못했습니다"라는 애매한 메시지만 뜨고 원인을 알 수 없었던 문제).
+	if QuotaIsExceeded() {
+		resetLabel, _ := QuotaResetETA()
+		return YouTubeCommentsResult{
+			Success:         false,
+			Comments:        []YouTubeComment{},
+			Message:         "유튜브 서버 할당량이 초과되어 댓글을 일시적으로 불러올 수 없습니다.",
+			QuotaExceeded:   true,
+			QuotaResetLabel: resetLabel,
+		}
+	}
+
 	url := fmt.Sprintf(
 		"https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=%s&maxResults=%d&order=relevance&textFormat=plainText&key=%s",
 		targetVideoID, maxResults, apiKey,
@@ -91,8 +107,20 @@ func FetchYouTubeComments(ctx context.Context, videoID, pageToken, apiKey string
 		if reason == "commentsDisabled" || reason == "videoNotFound" {
 			return YouTubeCommentsResult{Success: false, Comments: []YouTubeComment{}, Message: "댓글을 사용할 수 없는 영상입니다."}
 		}
+		if reason == "quotaExceeded" {
+			MarkQuotaExceeded()
+			resetLabel, _ := QuotaResetETA()
+			return YouTubeCommentsResult{
+				Success:         false,
+				Comments:        []YouTubeComment{},
+				Message:         "유튜브 서버 할당량이 초과되어 댓글을 일시적으로 불러올 수 없습니다.",
+				QuotaExceeded:   true,
+				QuotaResetLabel: resetLabel,
+			}
+		}
 		return YouTubeCommentsResult{Success: false, Comments: []YouTubeComment{}, Message: "댓글을 불러오지 못했습니다."}
 	}
+	ClearQuotaExceeded()
 
 	comments := make([]YouTubeComment, 0, len(body.Items))
 	for _, item := range body.Items {
