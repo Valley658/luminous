@@ -5292,90 +5292,70 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
 })();
 </script>
 
-<style>
-    .member-photo-banner {
-        position: relative;
-        width: 100%;
-        height: 220px;
-        border-radius: 18px;
-        overflow: hidden;
-        margin-bottom: 20px;
-        background: #0f0f0f;
-        display: none;
-    }
-    .member-photo-banner-blur, .member-photo-banner-crisp {
-        position: absolute;
-        inset: 0;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-    .member-photo-banner-blur {
-        background-size: cover;
-        filter: blur(28px) brightness(.55) saturate(1.15);
-        transform: scale(1.2);
-    }
-    .member-photo-banner-crisp {
-        background-size: contain;
-    }
-    .member-photo-banner-scrim {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 100%);
-    }
-    @media (max-width: 640px) {
-        .member-photo-banner { height: 150px; border-radius: 14px; }
-    }
-</style>
-
-<!-- 멤버 선택 시 배경: 처음엔 body 전체에 사진을 깔고 콘텐츠 영역을 투명하게
-     만들어 그 틈으로 비쳐 보이게 하는 방식이었는데, 실제로 영상 썸네일들이
-     그리드를 꽉 채우면 사진이 좁은 틈에서만 조각조각 보여서 지저분했음(유저
-     피드백: "배치/크기가 안 예쁨"). 그래서 대신 콘텐츠 상단에 전용 배너
-     한 칸을 만들어 그 안에서만 사진을 보여주는 방식으로 변경 - 뒤에는 같은
-     사진을 흐리게 확대해 깔아서(블러 백드롭) 어떤 비율의 사진이 와도 빈
-     공간 없이 예쁘게 채워지고, 앞에는 사진 전체가 잘리지 않게(contain) 또렷하게
-     올림. 영상 그리드와 겹치지 않는 별도 요소라서 영상이 몇 개가 뜨든 항상
-     동일하게 예쁘게 보임. -->
+<!-- 멤버 선택 시 배경: 원래 script.js가 멤버별 "퍼스널 컬러" 단색 배경을
+     body/사이드바/헤더 등에 인라인 !important로 직접 칠하는데(그 파일은 배포
+     방식이 달라 직접 수정 불가), static/music/<멤버>/ 에 사진이 있는 멤버는
+     그 단색 대신 사진을 body 전체 배경으로 깔아줌(유저가 명시적으로 "Body의
+     백그라운드에 있어야 한다고 모든 Body의 부분에"라고 요청 - 작은 배너 박스로
+     가두지 말고 body 전체를 채울 것). 영상 그리드/헤더 등 원래 불투명했던
+     콘텐츠 영역은 투명하게 만들어서 그 사이로 body의 사진이 실제로 비쳐 보이게
+     함(안 그러면 화면 대부분을 차지하는 콘텐츠 영역에 가려서 사진이 거의 안 보임).
+     사이드바/헤더는 가독성을 위해 원래 배경 그대로 둠. -->
 <script>
 (function () {
     var MEMBER_MUSIC = {{ MEMBER_MUSIC | tojson }};
-    var BANNER_ID = "memberPhotoBanner";
-
-    function getOrCreateBanner() {
-        var banner = document.getElementById(BANNER_ID);
-        if (banner) return banner;
-        var main = document.getElementById("mainContent");
-        if (!main) return null;
-        banner = document.createElement("div");
-        banner.id = BANNER_ID;
-        banner.className = "member-photo-banner";
-        banner.innerHTML =
-            '<div class="member-photo-banner-blur"></div>' +
-            '<div class="member-photo-banner-crisp"></div>' +
-            '<div class="member-photo-banner-scrim"></div>';
-        var anchor = document.getElementById("homeHeaderWrapper");
-        if (anchor && anchor.parentNode === main) {
-            main.insertBefore(banner, anchor);
-        } else {
-            main.insertBefore(banner, main.firstChild);
-        }
-        return banner;
-    }
+    var BG_PHOTO_SELECTOR = "body";
+    var BG_TRANSPARENT_SELECTORS = [".content", ".content-header", ".content-header-wrapper", ".tab-container"];
+    var BG_RESTORE_SELECTORS = [".sidebar", ".sidebar-scroll-area", ".pl-header", ".fixed-logo-area"];
 
     function applyMemberPhotoBackground(memberName) {
         var track = memberName ? MEMBER_MUSIC[memberName] : null;
         var img = track && track.img;
-        var banner = getOrCreateBanner();
-        if (!banner) return;
+
+        document.querySelectorAll(BG_PHOTO_SELECTOR).forEach(function (el) {
+            if (img) {
+                el.style.setProperty(
+                    "background-image",
+                    "linear-gradient(rgba(15,15,15,.6), rgba(15,15,15,.6)), url('" + img + "')",
+                    "important"
+                );
+                // cover로 하면 사진의 흰 여백/가장자리가 잘려서 얼굴/손 등 일부만
+                // 확대되어 보이는 문제가 있었어서 contain으로 사진 전체가 다 보이게 함.
+                // 레터박스(빈 공간)는 사이트 어두운 배경색으로 채움.
+                el.style.setProperty("background-size", "contain", "important");
+                el.style.setProperty("background-position", "center center", "important");
+                el.style.setProperty("background-repeat", "no-repeat", "important");
+                el.style.setProperty("background-attachment", "fixed", "important");
+                el.style.setProperty("background-color", "#0f0f0f", "important");
+            } else {
+                el.style.removeProperty("background-image");
+                el.style.removeProperty("background-size");
+                el.style.removeProperty("background-position");
+                el.style.removeProperty("background-repeat");
+                el.style.removeProperty("background-attachment");
+                el.style.removeProperty("background-color");
+            }
+        });
+
+        BG_TRANSPARENT_SELECTORS.forEach(function (sel) {
+            document.querySelectorAll(sel).forEach(function (el) {
+                if (img) {
+                    el.style.setProperty("background-color", "transparent", "important");
+                    el.style.setProperty("background-image", "none", "important");
+                } else {
+                    el.style.removeProperty("background-color");
+                    el.style.removeProperty("background-image");
+                }
+            });
+        });
+
         if (img) {
-            banner.style.display = "block";
-            var blur = banner.querySelector(".member-photo-banner-blur");
-            var crisp = banner.querySelector(".member-photo-banner-crisp");
-            var url = "url('" + img + "')";
-            blur.style.backgroundImage = url;
-            crisp.style.backgroundImage = url;
-        } else {
-            banner.style.display = "none";
+            BG_RESTORE_SELECTORS.forEach(function (sel) {
+                document.querySelectorAll(sel).forEach(function (el) {
+                    el.style.removeProperty("background-image");
+                    el.style.removeProperty("background-color");
+                });
+            });
         }
     }
 
