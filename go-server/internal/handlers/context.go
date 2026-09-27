@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"pastellive/internal/banlist"
 	"pastellive/internal/cache"
 	"pastellive/internal/config"
 	"pastellive/internal/data"
@@ -38,6 +39,7 @@ type App struct {
 	Phash        *phash.Client
 	Meili        *meilisearch.Client
 	RateLimiter  *middleware.RateLimiter
+	BanList      *banlist.List
 	LocalAI      *localai.Client
 	WebSearch    *websearch.Client
 	MemberID     *memberid.Client
@@ -74,6 +76,7 @@ func New(db *pdb.DB, lumiDB *pdb.DB, cfg *config.Config, store *session.Store) *
 		MemberID:             memberid.New(cfg.MemberIDServiceURL, cfg.MemberIDServiceTimeout),
 		Email:                email.New(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.SMTPFromName),
 		Notify:               realtime.NewHub(),
+		BanList:              banlist.New(),
 		GenRepImageOverrides: data.BuildGenerationRepImageOverrides(cfg.StaticDir),
 	}
 }

@@ -10,6 +10,22 @@ import (
 	"pastellive/internal/session"
 )
 
+// RealIP: chi의 내장 middleware.Logger를 포함해 r.RemoteAddr을 그대로 찍는
+// 모든 코드(서버 로그 뷰어 등)가 "127.0.0.1"이 아니라 진짜 접속자 IP를 보게
+// 만든다. Cloudflare Tunnel -> nginx -> 이 서버(127.0.0.1) 구조라 TCP
+// 연결 자체는 항상 nginx(로컬)에서 오므로 RemoteAddr만 보면 전부 127.0.0.1로
+// 찍힌다 - httputil.GetClientIP가 이미 CF-Connecting-IP/X-Real-IP를 신뢰하는
+// 순서로 실제 IP를 뽑아내므로, 그 값으로 RemoteAddr 자체를 바꿔치기한다.
+// 반드시 chimw.Logger보다 먼저(체인에서 더 바깥쪽에) 등록해야 로그에 반영된다.
+func RealIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ip := httputil.GetClientIP(r); ip != "" && ip != "unknown" {
+			r.RemoteAddr = ip + ":0"
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 type ctxKey string
 
 const sessionCtxKey ctxKey = "pl_session"

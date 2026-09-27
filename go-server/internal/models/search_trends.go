@@ -1,7 +1,9 @@
 package models
 
 import (
+	"database/sql"
 	"regexp"
+	"time"
 
 	pdb "pastellive/internal/db"
 )
@@ -67,6 +69,52 @@ func GetTrendingKeywords(d *pdb.DB, limit int) ([]string, error) {
 func DeleteSearchTrend(d *pdb.DB, keyword string) error {
 	_, err := d.Exec("DELETE FROM search_trends WHERE keyword = ?", keyword)
 	return err
+}
+
+// DeleteAllSearchTrends: 관리자 "전체 삭제" 버튼 - 인기 검색어 통계를
+// 전부 초기화한다.
+func DeleteAllSearchTrends(d *pdb.DB) error {
+	_, err := d.Exec("DELETE FROM search_trends")
+	return err
+}
+
+type SearchTrendEntry struct {
+	Keyword      string `json:"keyword"`
+	SearchCount  int    `json:"search_count"`
+	LastSearched string `json:"last_searched"`
+}
+
+// ListSearchTrends: 관리자 대시보드에서 검색어를 검색/조회하기 위한 목록.
+// q가 비어있으면 전체(검색 많은 순), 아니면 keyword LIKE 검색.
+func ListSearchTrends(d *pdb.DB, q string, limit int) ([]SearchTrendEntry, error) {
+	var rows *sql.Rows
+	var err error
+	if q == "" {
+		rows, err = d.Query("SELECT keyword, search_count, last_searched FROM search_trends ORDER BY search_count DESC, last_searched DESC LIMIT ?", limit)
+	} else {
+		rows, err = d.Query("SELECT keyword, search_count, last_searched FROM search_trends WHERE keyword LIKE ? ORDER BY search_count DESC, last_searched DESC LIMIT ?", "%"+q+"%", limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []SearchTrendEntry
+	for rows.Next() {
+		var e SearchTrendEntry
+		var lastSearched any
+		if err := rows.Scan(&e.Keyword, &e.SearchCount, &lastSearched); err == nil {
+			if s, ok := lastSearched.(string); ok {
+				e.LastSearched = s
+			} else if t, ok := lastSearched.(time.Time); ok {
+				e.LastSearched = t.Format("2006-01-02 15:04:05")
+			}
+			out = append(out, e)
+		}
+	}
+	if out == nil {
+		out = []SearchTrendEntry{}
+	}
+	return out, rows.Err()
 }
 
 func CleanupStaleSearchTrends(d *pdb.DB) (int64, error) {

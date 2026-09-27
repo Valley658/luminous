@@ -172,6 +172,12 @@ func main() {
 	if err := models.InitPageViewsTable(database); err != nil {
 		log.Fatalf("page_views 테이블 초기화 실패: %v", err)
 	}
+	if err := models.InitIPBanTable(database); err != nil {
+		log.Fatalf("banned_ips 테이블 초기화 실패: %v", err)
+	}
+	if err := models.InitUserLoginLogTable(database); err != nil {
+		log.Fatalf("user_login_log 테이블 초기화 실패: %v", err)
+	}
 	// [2026-09-21: MySQL 백엔드에서 삭제된 옛 Python 앱 스키마를 전제로 하던
 	// 테이블들(members 포함, 총 14개+users 컬럼 일부)이 새 DB에서는 아예
 	// 생성되지 않던 문제 - 아래 두 함수가 이를 한 번에 복구한다.]
@@ -188,6 +194,9 @@ func main() {
 
 	rateLimiter := plmw.NewRateLimiter(cfg.RateLimitEnabled, cfg.RateLimitWindowSec, cfg.RateLimitMaxRequests, cfg.RateLimitBanMinutes)
 	app.RateLimiter = rateLimiter
+	if err := app.BanList.Load(database); err != nil {
+		log.Printf("차단된 IP 목록 로드 실패(빈 목록으로 시작): %v", err)
+	}
 
 	// [2026-09-25 보안 감사: 로그인/회원가입 무차별 대입 방지용 - 위 전체
 	// 트래픽 rate limiter와 별개로, /api/login·/api/register에만 훨씬 빡빡한
@@ -195,8 +204,10 @@ func main() {
 	authRateLimiter := plmw.NewRateLimiter(cfg.RateLimitEnabled, cfg.AuthRateLimitWindowSec, cfg.AuthRateLimitMaxRequests, cfg.AuthRateLimitBanMinutes)
 
 	r := chi.NewRouter()
+	r.Use(plmw.RealIP)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(app.IPBanGuard)
 	r.Use(rateLimiter.Middleware)
 	r.Use(plmw.SessionMiddleware(sessionStore))
 	r.Use(plmw.CSRFGuard)
@@ -320,6 +331,13 @@ func main() {
 	r.Get("/api/admin/audit-log", app.ApiAdminAuditLogHandler)
 	r.Get("/api/admin/rate-limit", app.ApiAdminRateLimitHandler)
 	r.Get("/api/admin/traffic", app.ApiAdminTrafficHandler)
+	r.Get("/api/admin/traffic/ip/{ip}", app.ApiAdminTrafficIPDetailHandler)
+	r.Post("/api/admin/ip-ban", app.ApiAdminIPBanHandler)
+	r.Post("/api/admin/ip-unban", app.ApiAdminIPUnbanHandler)
+	r.Get("/api/admin/search-trends", app.ApiAdminSearchTrendsListHandler)
+	r.Post("/api/admin/search-trends/delete", app.ApiAdminSearchTrendsDeleteHandler)
+	r.Post("/api/admin/search-trends/delete-all", app.ApiAdminSearchTrendsDeleteAllHandler)
+	r.Get("/api/admin/users/{id}/ip-history", app.ApiAdminUserIPHistoryHandler)
 	r.Get("/api/all_comments", app.ApiGetAllCommentsHandler)
 	r.Post("/api/delete_comments", app.ApiDeleteCommentsHandler)
 

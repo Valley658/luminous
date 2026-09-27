@@ -374,8 +374,21 @@
                         <canvas id="dailyChart"></canvas>
                     </div>
                     <div class="card">
-                        <h2>인기 검색어 TOP 10</h2>
+                        <h2>
+                            <span>인기 검색어 TOP 10</span>
+                            <button class="toolbar-btn danger" id="btnDeleteAllKeywords" title="인기 검색어 데이터 전체 삭제"><i class="fas fa-trash"></i> 전체 삭제</button>
+                        </h2>
                         <canvas id="keywordChart"></canvas>
+                        <div class="search-row" style="margin-top:14px;">
+                            <input type="text" id="keywordSearchInput" placeholder="검색어로 조회...">
+                            <button class="btn" id="btnKeywordSearch"><i class="fas fa-magnifying-glass"></i> 검색</button>
+                        </div>
+                        <div class="data-table-wrap" style="margin-top:8px;">
+                            <table class="data-table">
+                                <thead><tr><th>검색어</th><th>검색 횟수</th><th>최근 검색</th><th></th></tr></thead>
+                                <tbody id="keywordSearchTableBody"><tr><td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">검색어를 입력해 조회하세요.</td></tr></tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="card">
                         <h2>신고 처리 현황</h2>
@@ -436,6 +449,33 @@
                                 <tbody id="topPathsTableBody"><tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted);">불러오는 중...</td></tr></tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+                <div class="card wide">
+                    <h2>
+                        <span><i class="fas fa-network-wired"></i> IP별 트래픽 (오늘, 요청 많은 순)</span>
+                        <input type="text" id="ipTrafficFilterInput" placeholder="IP 필터" style="background:var(--bg-elevated); border:1px solid var(--border-line); color:var(--text-primary); padding:5px 10px; border-radius:6px; font-size:12px; font-family:inherit; width:140px;">
+                    </h2>
+                    <div class="data-table-wrap">
+                        <table class="data-table" id="ipTrafficTable">
+                            <thead><tr><th>IP</th><th>요청 수</th><th>방문 경로 수</th><th>최초 접속</th><th>최근 접속</th><th></th></tr></thead>
+                            <tbody id="ipTrafficTableBody"><tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">불러오는 중...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card wide">
+                    <h2>
+                        <span><i class="fas fa-ban"></i> 차단된 IP 목록</span>
+                        <span class="toolbar">
+                            <input type="text" id="ipBanInput" placeholder="차단할 IP" style="background:var(--bg-elevated); border:1px solid var(--border-line); color:var(--text-primary); padding:5px 10px; border-radius:6px; font-size:12px; font-family:inherit; width:140px;">
+                            <button class="toolbar-btn danger" id="btnIPBanAdd"><i class="fas fa-ban"></i> 차단 추가</button>
+                        </span>
+                    </h2>
+                    <div class="data-table-wrap">
+                        <table class="data-table" id="bannedIPTable">
+                            <thead><tr><th>IP</th><th>사유</th><th>차단 시각</th><th></th></tr></thead>
+                            <tbody id="bannedIPTableBody"><tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);">불러오는 중...</td></tr></tbody>
+                        </table>
                     </div>
                 </div>
                 <div class="card wide">
@@ -688,6 +728,62 @@ async function loadStats() {
     }
 }
 
+async function searchKeywordTrends(q) {
+    const body = document.getElementById("keywordSearchTableBody");
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;"><i class="fas fa-spinner fa-spin"></i> 조회 중...</td></tr>';
+    try {
+        const params = new URLSearchParams({ q, limit: 50 });
+        const res = await fetch("/api/admin/search-trends?" + params.toString());
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "조회 실패");
+        const trends = data.trends || [];
+        body.innerHTML = trends.length
+            ? trends.map(t => `<tr>
+                <td>${escapeHtml(t.keyword)}</td>
+                <td>${t.search_count}</td>
+                <td>${escapeHtml(t.last_searched || "")}</td>
+                <td><button class="toolbar-btn danger" style="padding:2px 6px; font-size:11px;" onclick="deleteKeywordTrend('${t.keyword.replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button></td>
+            </tr>`).join("")
+            : '<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">결과가 없습니다.</td></tr>';
+    } catch (e) {
+        body.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">불러오지 못했습니다: ${escapeHtml(e.message)}</td></tr>`;
+    }
+}
+document.getElementById("btnKeywordSearch").addEventListener("click", () => searchKeywordTrends(document.getElementById("keywordSearchInput").value.trim()));
+document.getElementById("keywordSearchInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") searchKeywordTrends(e.target.value.trim());
+});
+
+async function deleteKeywordTrend(keyword) {
+    const ok = await confirmDialog(`"${keyword}" 검색어 데이터를 삭제할까요?`, { dangerous: true, confirmButtonText: "삭제" });
+    if (!ok) return;
+    try {
+        const res = await fetch("/api/admin/search-trends/delete", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keyword }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "삭제 실패");
+        showToast("삭제했습니다.", "success");
+        searchKeywordTrends(document.getElementById("keywordSearchInput").value.trim());
+    } catch (e) {
+        showToast("삭제 실패: " + e.message, "error");
+    }
+}
+document.getElementById("btnDeleteAllKeywords").addEventListener("click", async () => {
+    const ok = await confirmDialog("인기 검색어 데이터를 전부 삭제할까요? 되돌릴 수 없습니다.", { dangerous: true, confirmButtonText: "전체 삭제" });
+    if (!ok) return;
+    try {
+        const res = await fetch("/api/admin/search-trends/delete-all", { method: "POST" });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "삭제 실패");
+        showToast("인기 검색어 데이터를 전부 삭제했습니다. 새로고침합니다...", "success");
+        setTimeout(() => location.reload(), 800);
+    } catch (e) {
+        showToast("삭제 실패: " + e.message, "error");
+    }
+});
+
 const AVATAR_PALETTE = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef", "#ec4899"];
 function avatarColorFor(u) {
     const seed = String(u.id || "");
@@ -733,7 +829,7 @@ async function loadUsers(page) {
                 <td>${escapeHtml(u.login_id || "없음")}</td>
                 <td>${escapeHtml(u.discord_username || "없음")}</td>
                 <td>${u.channel_id ? '<span class="channel-badge"><i class="fas fa-tv"></i> 보유</span>' : '<span style="color:var(--text-faint);">없음</span>'}</td>
-                <td>${escapeHtml(u.last_ip || "없음")}</td>
+                <td>${u.last_ip ? `${escapeHtml(u.last_ip)} <button class="toolbar-btn" style="padding:2px 6px; font-size:11px;" title="접속 IP 이력" onclick="showUserIPHistory(${u.id}, '${escapeHtml(u.nickname || u.email || "").replace(/'/g, "\\'")}')"><i class="fas fa-clock-rotate-left"></i></button>` : "없음"}</td>
                 <td title="${escapeHtml(u.created_at || "")}">${escapeHtml((u.created_at || "").slice(0, 10) || "없음")}</td>
                 <td title="${escapeHtml(u.updated_at || "")}">${escapeHtml((u.updated_at || "").slice(0, 10) || "없음")}</td>
                 <td><button class="toolbar-btn danger" title="회원 삭제" onclick="deleteUser(${u.id}, '${escapeHtml(u.nickname || u.email || "").replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button></td>
@@ -767,6 +863,78 @@ async function deleteUser(userId, label) {
         showToast('삭제 실패: ' + e.message, 'error');
     }
 }
+async function banIPPrompt(ip) {
+    if (typeof Swal === "undefined") {
+        const reason = prompt(`"${ip}" 를 차단할까요? 사유(선택):`);
+        if (reason === null) return;
+        await doBanIP(ip, reason);
+        return;
+    }
+    const { value: reason, isConfirmed } = await Swal.fire({
+        title: `"${ip}" 차단`,
+        input: "text",
+        inputLabel: "사유 (선택)",
+        showCancelButton: true,
+        confirmButtonText: "차단",
+        confirmButtonColor: "#dc2626",
+        background: "#1c1c1c", color: "#fff",
+    });
+    if (!isConfirmed) return;
+    await doBanIP(ip, reason || "");
+}
+async function doBanIP(ip, reason) {
+    try {
+        const res = await fetch("/api/admin/ip-ban", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ip, reason }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "차단 실패");
+        showToast(`"${ip}" 차단했습니다.`, "success");
+        if (typeof loadTraffic === "function" && document.getElementById("tab-ratelimit").classList.contains("active")) loadTraffic();
+    } catch (e) {
+        showToast("차단 실패: " + e.message, "error");
+    }
+}
+async function unbanIP(ip) {
+    const ok = await confirmDialog(`"${ip}" 차단을 해제할까요?`);
+    if (!ok) return;
+    try {
+        const res = await fetch("/api/admin/ip-unban", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ip }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "해제 실패");
+        showToast(`"${ip}" 차단 해제했습니다.`, "success");
+        if (typeof loadTraffic === "function" && document.getElementById("tab-ratelimit").classList.contains("active")) loadTraffic();
+    } catch (e) {
+        showToast("해제 실패: " + e.message, "error");
+    }
+}
+
+async function showUserIPHistory(userId, label) {
+    if (typeof Swal === "undefined") { alert("이력 보기는 이 화면에서 지원되지 않습니다."); return; }
+    Swal.fire({ title: `${label} 접속 IP 이력`, html: '<i class="fas fa-spinner fa-spin"></i> 불러오는 중...', background: "#1c1c1c", color: "#fff", showConfirmButton: true, confirmButtonText: "닫기" });
+    try {
+        const res = await fetch(`/api/admin/users/${userId}/ip-history`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "조회 실패");
+        const history = data.history || [];
+        const html = history.length
+            ? `<div style="max-height:320px; overflow-y:auto; text-align:left;">${history.map(h => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 4px; border-bottom:1px solid #333; font-size:13px;">
+                    <span>${escapeHtml(h.ip || "")}</span>
+                    <span style="color:var(--text-faint);">${escapeHtml(h.created_at || "")}</span>
+                    <button class="toolbar-btn danger" style="padding:2px 6px; font-size:11px;" onclick="banIPPrompt('${(h.ip || "").replace(/'/g, "\\'")}')"><i class="fas fa-ban"></i> 차단</button>
+                </div>`).join("")}</div>`
+            : '<div style="color:var(--text-muted); padding:20px 0;">접속 기록이 없습니다.</div>';
+        Swal.update({ html });
+    } catch (e) {
+        Swal.update({ html: `<div style="color:var(--text-muted);">불러오지 못했습니다: ${escapeHtml(e.message)}</div>` });
+    }
+}
+
 document.getElementById("btnUserSearch").addEventListener("click", () => {
     usersCurrentQuery = document.getElementById("userSearchInput").value.trim();
     loadUsers(1);
@@ -999,6 +1167,20 @@ async function loadTraffic() {
             ? topPaths.map(p => `<tr><td>${escapeHtml(p.path)}</td><td>${p.views}</td></tr>`).join("")
             : '<tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted);">오늘 기록된 방문이 없습니다.</td></tr>';
 
+        lastByIP = data.by_ip || [];
+        renderIPTrafficTable();
+
+        const bannedIPs = data.banned_ips || [];
+        const bannedBody = document.getElementById("bannedIPTableBody");
+        bannedBody.innerHTML = bannedIPs.length
+            ? bannedIPs.map(b => `<tr>
+                <td>${escapeHtml(b.ip)}</td>
+                <td>${escapeHtml(b.reason || "-")}</td>
+                <td>${escapeHtml(b.banned_at || "")}</td>
+                <td><button class="toolbar-btn" onclick="unbanIP('${b.ip.replace(/'/g, "\\'")}')"><i class="fas fa-rotate-left"></i> 해제</button></td>
+            </tr>`).join("")
+            : '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">차단된 IP가 없습니다.</td></tr>';
+
         if (!data.rate_limit_enabled) {
             chip.textContent = "(요청 속도 제한 비활성화됨)";
             rlBody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:20px;">요청 속도 제한이 꺼져 있습니다 (RATE_LIMIT_ENABLED=false).</td></tr>';
@@ -1022,6 +1204,54 @@ async function loadTraffic() {
     }
 }
 document.getElementById("btnTrafficRefresh").addEventListener("click", loadTraffic);
+
+let lastByIP = [];
+function renderIPTrafficTable() {
+    const body = document.getElementById("ipTrafficTableBody");
+    const filter = (document.getElementById("ipTrafficFilterInput").value || "").trim();
+    const rows = filter ? lastByIP.filter(s => s.ip.includes(filter)) : lastByIP;
+    body.innerHTML = rows.length
+        ? rows.map(s => `<tr>
+            <td style="cursor:pointer; text-decoration:underline dotted;" onclick="showIPDetail('${s.ip.replace(/'/g, "\\'")}')">${escapeHtml(s.ip)}</td>
+            <td>${s.views}</td>
+            <td>${s.paths}</td>
+            <td>${escapeHtml(s.first_seen || "")}</td>
+            <td>${escapeHtml(s.last_seen || "")}</td>
+            <td><button class="toolbar-btn danger" style="padding:2px 6px; font-size:11px;" onclick="banIPPrompt('${s.ip.replace(/'/g, "\\'")}')"><i class="fas fa-ban"></i></button></td>
+        </tr>`).join("")
+        : '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">오늘 기록된 접속이 없습니다.</td></tr>';
+}
+document.getElementById("ipTrafficFilterInput").addEventListener("input", renderIPTrafficTable);
+
+async function showIPDetail(ip) {
+    if (typeof Swal === "undefined") { alert("상세 보기는 이 화면에서 지원되지 않습니다."); return; }
+    Swal.fire({ title: `${ip} 접속 상세`, html: '<i class="fas fa-spinner fa-spin"></i> 불러오는 중...', background: "#1c1c1c", color: "#fff", confirmButtonText: "닫기", width: 560 });
+    try {
+        const res = await fetch(`/api/admin/traffic/ip/${encodeURIComponent(ip)}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "조회 실패");
+        const views = data.views || [];
+        const html = `
+            ${data.banned ? '<div style="color:#f87171; margin-bottom:8px;"><i class="fas fa-ban"></i> 현재 차단된 IP입니다.</div>' : ""}
+            <div style="max-height:340px; overflow-y:auto; text-align:left;">${views.length ? views.map(v => `
+                <div style="display:flex; justify-content:space-between; gap:10px; padding:5px 4px; border-bottom:1px solid #333; font-size:12px;">
+                    <span style="word-break:break-all;">${escapeHtml(v.path)}</span>
+                    <span style="color:var(--text-faint); white-space:nowrap;">${escapeHtml(v.viewed_at || "")}</span>
+                </div>`).join("") : '<div style="color:var(--text-muted); padding:20px 0;">기록이 없습니다.</div>'}</div>`;
+        Swal.update({ html });
+    } catch (e) {
+        Swal.update({ html: `<div style="color:var(--text-muted);">불러오지 못했습니다: ${escapeHtml(e.message)}</div>` });
+    }
+}
+
+document.getElementById("btnIPBanAdd").addEventListener("click", async () => {
+    const input = document.getElementById("ipBanInput");
+    const ip = input.value.trim();
+    if (!ip) return;
+    await banIPPrompt(ip);
+    input.value = "";
+    loadTraffic();
+});
 
 let currentReportStatus = "pending";
 function loadReports() {

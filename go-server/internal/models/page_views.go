@@ -131,6 +131,75 @@ func OnlineNowCount(d *pdb.DB, windowMinutes int) (int, error) {
 	return n, err
 }
 
+type IPTrafficStat struct {
+	IP        string `json:"ip"`
+	Views     int    `json:"views"`
+	Paths     int    `json:"paths"`
+	LastSeen  string `json:"last_seen"`
+	FirstSeen string `json:"first_seen"`
+}
+
+// TrafficByIPToday: 오늘 접속한 IP별 요청 수/방문 경로 수/최초·최근 접속
+// 시각 - "이 IP에서 어떤 트래픽이 왔는지" 분석용 (와이어샤크처럼 패킷 단위는
+// 아니지만, 페이지 요청 단위로는 동일한 정보).
+func TrafficByIPToday(d *pdb.DB, limit int) ([]IPTrafficStat, error) {
+	todayExpr := "date(viewed_at) = date('now','localtime')"
+	if d.Backend == "mysql" {
+		todayExpr = "DATE(viewed_at) = CURDATE()"
+	}
+	rows, err := d.Query("SELECT ip_address, COUNT(*) AS c, COUNT(DISTINCT path), MIN(viewed_at), MAX(viewed_at) "+
+		"FROM page_views WHERE "+todayExpr+" AND ip_address IS NOT NULL AND ip_address != '' "+
+		"GROUP BY ip_address ORDER BY c DESC LIMIT ?", limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []IPTrafficStat
+	for rows.Next() {
+		var s IPTrafficStat
+		if err := rows.Scan(&s.IP, &s.Views, &s.Paths, &s.FirstSeen, &s.LastSeen); err == nil {
+			out = append(out, s)
+		}
+	}
+	if out == nil {
+		out = []IPTrafficStat{}
+	}
+	return out, rows.Err()
+}
+
+// RecentPageViewsForIP: 특정 IP가 오늘 실제로 어떤 경로들을 방문했는지
+// 시간순으로 - IP별 상세(와이어샤크 스타일 드릴다운) 조회용.
+func RecentPageViewsForIP(d *pdb.DB, ip string, limit int) ([]struct {
+	Path     string `json:"path"`
+	ViewedAt string `json:"viewed_at"`
+}, error) {
+	rows, err := d.Query("SELECT path, viewed_at FROM page_views WHERE ip_address = ? ORDER BY viewed_at DESC LIMIT ?", ip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []struct {
+		Path     string `json:"path"`
+		ViewedAt string `json:"viewed_at"`
+	}
+	for rows.Next() {
+		var p struct {
+			Path     string `json:"path"`
+			ViewedAt string `json:"viewed_at"`
+		}
+		if err := rows.Scan(&p.Path, &p.ViewedAt); err == nil {
+			out = append(out, p)
+		}
+	}
+	if out == nil {
+		out = []struct {
+			Path     string `json:"path"`
+			ViewedAt string `json:"viewed_at"`
+		}{}
+	}
+	return out, rows.Err()
+}
+
 // TopPathsToday: 오늘 방문 많은 경로 TOP N (참고용 - 멤버별 랭킹은 SPA 특성상
 // 여기서 안 나오고, 서버 라우트가 실제로 나뉘는 페이지들만 잡힌다).
 func TopPathsToday(d *pdb.DB, limit int) ([]struct {

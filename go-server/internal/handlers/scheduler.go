@@ -100,6 +100,11 @@ func (a *App) StartBackgroundScheduler() {
 			log.Printf("page_views 90일 지난 방문 기록 정리됨: %d개", n)
 		}
 	})
+	runEvery(24*time.Hour, true, func() {
+		if n, err := models.DeleteOldUserLoginLog(a.DB, 90); err == nil && n > 0 {
+			log.Printf("user_login_log 90일 지난 로그인 기록 정리됨: %d개", n)
+		}
+	})
 	runDailyAt(23, 10, a.runWebpBackfillJob)
 	runDailyAt(23, 35, a.cleanupOrphanFanartImages)
 	runDailyAt(9, 0, a.runWeeklyDigestJob)

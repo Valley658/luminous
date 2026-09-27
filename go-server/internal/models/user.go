@@ -199,11 +199,13 @@ func CreateUser(d *pdb.DB, loginID, passwordHash, nickname, lastIP string) (int6
 
 func UpdateLastIP(d *pdb.DB, userID int64, ip string) error {
 	_, err := d.Exec("UPDATE users SET last_ip=? WHERE id=?", ip, userID)
+	_ = LogUserLoginIP(d, userID, ip)
 	return err
 }
 
 func UpdateLastIPAndPasswordHash(d *pdb.DB, userID int64, ip, hash string) error {
 	_, err := d.Exec("UPDATE users SET last_ip=?, password_hash=? WHERE id=?", ip, hash, userID)
+	_ = LogUserLoginIP(d, userID, ip)
 	return err
 }
 

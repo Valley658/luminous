@@ -26,6 +26,19 @@ func isTrackablePageView(path string) bool {
 	return true
 }
 
+// IPBanGuard: 관리자가 차단한 IP는 아예 앱 로직을 타지 않고 즉시 403으로
+// 막는다. RateLimiter보다도 먼저 걸어서(main.go 등록 순서 참고) 밴된 IP가
+// rate limit 카운터조차 소모하지 않게 한다.
+func (a *App) IPBanGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if a.BanList != nil && a.BanList.IsBanned(httputil.GetClientIP(r)) {
+			http.Error(w, "차단된 IP입니다.", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // TrackPageView: 실제 페이지 GET 요청을 page_views 테이블에 비동기로 기록하는
 // 미들웨어. 관리자 대시보드의 "트래픽" 탭(일별/시간대별 방문자·페이지뷰 추이,
 // 실시간 접속자 수)의 데이터 소스. DB insert가 응답 지연에 영향을 주지 않도록

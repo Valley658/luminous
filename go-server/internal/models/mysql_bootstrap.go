@@ -319,6 +319,22 @@ func InitMySQLMissingTables(d *pdb.DB) error {
 		INDEX idx_page_views_viewed_at (viewed_at)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
 
+	// --- ip_ban.go: banned_ips (관리자 수동 IP 차단) ---
+	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS banned_ips (
+		ip VARCHAR(45) PRIMARY KEY,
+		reason VARCHAR(255) NULL,
+		banned_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+
+	// --- user_login_log.go: user_login_log (회원별 접속 IP 이력) ---
+	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS user_login_log (
+		id INT PRIMARY KEY AUTO_INCREMENT,
+		user_id INT NOT NULL,
+		ip_address VARCHAR(45) NULL,
+		created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+		INDEX idx_user_login_log_user_id (user_id, created_at)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+
 	// NOTE: "blocked_bots" is intentionally NOT created here. It's named in
 	// admin_dashboard.go's DB overview list, but nothing in this repo ever
 	// reads or writes to it - a dead reference to an old Python-app feature
