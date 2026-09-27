@@ -157,12 +157,18 @@ func BuildMemberMusicMap(staticDir string) map[string]MemberMusicTrack {
 				songFile = f.Name()
 			}
 		}
-		if imgFile == "" || songFile == "" {
+		if songFile == "" {
+			// 이미지는 없어도(예: 앨범아트 없이 오디오만 올려둔 경우) 괜찮음 -
+			// 배경 사진 표시만 건너뛰고 재생은 그대로 됨. 오디오가 없으면 스킵.
 			continue
 		}
 		title := strings.TrimSuffix(songFile, filepath.Ext(songFile))
+		imgURL := ""
+		if imgFile != "" {
+			imgURL = "/static/music/" + url.PathEscape(memberName) + "/" + url.PathEscape(imgFile)
+		}
 		result[memberName] = MemberMusicTrack{
-			Img:   "/static/music/" + url.PathEscape(memberName) + "/" + url.PathEscape(imgFile),
+			Img:   imgURL,
 			Song:  "/static/music/" + url.PathEscape(memberName) + "/" + url.PathEscape(songFile),
 			Title: title,
 		}
