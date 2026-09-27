@@ -5318,6 +5318,23 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
     // 직접 같은 그라데이션을 다시 칠해줌.
     var STELLIVE_GRADIENT = "linear-gradient(135deg, #3b82f6, #8b5cf6)";
 
+    // [2026-09-27] "사진이 오른쪽만 잘려 보인다"는 원인을 찾음: 사진은 body(뷰포트
+    // 전체) 기준으로 가운데 정렬되는데, 왼쪽 사이드바(불투명)가 그 사진의 왼쪽
+    // 부분을 그대로 가려버림. 즉 실제로 눈에 보이는 공간은 사이드바 오른쪽부터인데
+    // 사진 중심은 화면 전체 기준으로 잡혀있어서, 보이는 영역 기준으로는 사진이
+    // 왼쪽으로 쏠려 있었던 것(그래서 상대적으로 오른쪽 여백/잘림처럼 보임). 사이드바
+    // 너비만큼 사진 중심을 오른쪽으로 밀어서 "실제로 보이는 콘텐츠 영역" 기준으로
+    // 가운데 오게 보정함.
+    function photoBackgroundPositionX() {
+        // offsetParent는 position:fixed 요소에서 null이 나오는 브라우저 특성이 있어서
+        // (실제로는 보이는데도 null) 그걸로 숨김 여부를 판단하면 안 되고, 대신
+        // getBoundingClientRect().width로 실제 렌더링 너비를 직접 잰다.
+        var sidebar = document.querySelector(".sidebar");
+        var sidebarWidth = sidebar ? sidebar.getBoundingClientRect().width : 0;
+        if (!sidebarWidth) return "50%";
+        return "calc(50% + " + (sidebarWidth / 2) + "px)";
+    }
+
     function applyMemberPhotoBackground(memberName) {
         var track = memberName ? MEMBER_MUSIC[memberName] : null;
         var img = track && track.img;
@@ -5333,7 +5350,7 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
                 // 확대되어 보이는 문제가 있었어서 contain으로 사진 전체가 다 보이게 함.
                 // 레터박스(빈 공간)는 사이트 어두운 배경색으로 채움.
                 el.style.setProperty("background-size", "contain", "important");
-                el.style.setProperty("background-position", "center center", "important");
+                el.style.setProperty("background-position", photoBackgroundPositionX() + " center", "important");
                 el.style.setProperty("background-repeat", "no-repeat", "important");
                 el.style.setProperty("background-attachment", "fixed", "important");
                 el.style.setProperty("background-color", "#0f0f0f", "important");
@@ -5387,14 +5404,33 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
         }
     }
 
+    var lastPhotoMemberName = null;
+
     document.addEventListener("click", function (e) {
         var item = e.target.closest(".nav-item");
         if (!item) return;
         var name = item.dataset.memberName;
         if (!name) return;
-        applyMemberPhotoBackground(MEMBER_MUSIC[name] ? name : null);
+        var photoMemberName = MEMBER_MUSIC[name] ? name : null;
+        lastPhotoMemberName = photoMemberName;
+        applyMemberPhotoBackground(photoMemberName);
         toggleCommunityTabForAllView(name);
     });
+
+    // 사이드바를 접었다 펴거나(sidebarToggle) 창 크기를 바꾸면 사이드바 너비가
+    // 바뀌어서 사진 중심 보정값도 다시 계산해줘야 함.
+    function reapplyIfPhotoActive() {
+        if (lastPhotoMemberName !== null && MEMBER_MUSIC[lastPhotoMemberName] && MEMBER_MUSIC[lastPhotoMemberName].img) {
+            applyMemberPhotoBackground(lastPhotoMemberName);
+        }
+    }
+    window.addEventListener("resize", reapplyIfPhotoActive);
+    var sidebarToggleBtn = document.getElementById("sidebarToggle");
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener("click", function () {
+            setTimeout(reapplyIfPhotoActive, 350);
+        });
+    }
 })();
 </script>
 
