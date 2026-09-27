@@ -58,8 +58,12 @@
     <style>
         
         #homeShortsSection {
-            position: relative; background-color:var(--bg-page); 
+            position: relative; background-color:var(--bg-page);
             padding: 0 24px 15px 24px; margin-top: 0; margin-bottom: 15px; border-bottom:1px solid var(--border);
+            /* [2026-09-27] 유저 요청: 스텔라이브(전체보기) 눌렀을 때 "추천 Shorts"가
+               계속 뜨는 게 헷갈린다고 해서 완전히 숨김. script.js의 O()가 계속
+               display:block으로 되돌리려 하므로 !important로 강제함. */
+            display: none !important;
         }
         .home-shorts-header {
             display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: bold; color:var(--text-primary); margin-bottom: 18px;
