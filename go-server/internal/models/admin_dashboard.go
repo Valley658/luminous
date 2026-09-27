@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 
 	pdb "pastellive/internal/db"
@@ -178,6 +179,10 @@ type AdminUserRow struct {
 	LastIP          sql.NullString
 	CreatedAt       sql.NullString
 	UpdatedAt       sql.NullString
+	IsStaff         sql.NullInt64
+	StaffRole       sql.NullString
+	Suspended       sql.NullInt64
+	SuspendedReason sql.NullString
 }
 
 func (u AdminUserRow) ToMap() map[string]any {
@@ -185,24 +190,54 @@ func (u AdminUserRow) ToMap() map[string]any {
 		"id": u.ID, "email": u.Email.String, "nickname": u.Nickname.String, "picture": u.Picture.String,
 		"login_id": u.LoginID.String, "discord_username": u.DiscordUsername.String, "channel_id": u.ChannelID.String,
 		"last_ip": u.LastIP.String, "created_at": u.CreatedAt.String, "updated_at": u.UpdatedAt.String,
+		"is_staff": u.IsStaff.Int64 != 0, "staff_role": u.StaffRole.String,
+		"suspended": u.Suspended.Int64 != 0, "suspended_reason": u.SuspendedReason.String,
 	}
 }
 
-func ListAdminUsers(d *pdb.DB, q string, page, perPage int) (users []AdminUserRow, total int64, err error) {
-	where := ""
+// adminUserSortColumns: 정렬 화이트리스트 - 사용자 입력을 SQL ORDER BY에
+// 직접 이어붙이지 않기 위해 허용된 값만 매핑해서 쓴다.
+var adminUserSortColumns = map[string]string{
+	"created_desc": "created_at DESC",
+	"created_asc":  "created_at ASC",
+	"updated_desc": "updated_at DESC",
+	"updated_asc":  "updated_at ASC",
+	"nickname_asc": "nickname ASC",
+	"id_desc":      "id DESC",
+	"id_asc":       "id ASC",
+}
+
+func ListAdminUsers(d *pdb.DB, q, sort, filter string, page, perPage int) (users []AdminUserRow, total int64, err error) {
+	var conds []string
 	var args []any
 	if q != "" {
-		where = "WHERE email LIKE ? OR nickname LIKE ? OR login_id LIKE ? OR discord_username LIKE ?"
+		conds = append(conds, "(email LIKE ? OR nickname LIKE ? OR login_id LIKE ? OR discord_username LIKE ?)")
 		like := "%" + q + "%"
-		args = []any{like, like, like, like}
+		args = append(args, like, like, like, like)
+	}
+	switch filter {
+	case "staff":
+		conds = append(conds, "is_staff = 1")
+	case "suspended":
+		conds = append(conds, "suspended = 1")
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = "WHERE " + strings.Join(conds, " AND ")
 	}
 	if err = d.QueryRow("SELECT COUNT(*) FROM users "+where, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
+	orderBy, ok := adminUserSortColumns[sort]
+	if !ok {
+		orderBy = adminUserSortColumns["id_desc"]
+	}
 	offset := (page - 1) * perPage
 	queryArgs := append(append([]any{}, args...), perPage, offset)
 	rows, err := d.Query(
-		"SELECT id, email, nickname, picture, login_id, discord_username, channel_id, last_ip, created_at, updated_at FROM users "+where+" ORDER BY id DESC LIMIT ? OFFSET ?",
+		"SELECT id, email, nickname, picture, login_id, discord_username, channel_id, last_ip, created_at, updated_at, "+
+			"COALESCE(is_staff,0), COALESCE(staff_role,''), COALESCE(suspended,0), COALESCE(suspended_reason,'') "+
+			"FROM users "+where+" ORDER BY "+orderBy+" LIMIT ? OFFSET ?",
 		queryArgs...,
 	)
 	if err != nil {
@@ -211,7 +246,8 @@ func ListAdminUsers(d *pdb.DB, q string, page, perPage int) (users []AdminUserRo
 	defer rows.Close()
 	for rows.Next() {
 		var u AdminUserRow
-		if err := rows.Scan(&u.ID, &u.Email, &u.Nickname, &u.Picture, &u.LoginID, &u.DiscordUsername, &u.ChannelID, &u.LastIP, &u.CreatedAt, &u.UpdatedAt); err == nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Nickname, &u.Picture, &u.LoginID, &u.DiscordUsername, &u.ChannelID, &u.LastIP, &u.CreatedAt, &u.UpdatedAt,
+			&u.IsStaff, &u.StaffRole, &u.Suspended, &u.SuspendedReason); err == nil {
 			users = append(users, u)
 		}
 	}

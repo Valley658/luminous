@@ -178,6 +178,9 @@ func main() {
 	if err := models.InitUserLoginLogTable(database); err != nil {
 		log.Fatalf("user_login_log 테이블 초기화 실패: %v", err)
 	}
+	if err := models.InitUserModerationColumns(database); err != nil {
+		log.Fatalf("회원 관리(스태프/정지) 컬럼 초기화 실패: %v", err)
+	}
 	// [2026-09-21: MySQL 백엔드에서 삭제된 옛 Python 앱 스키마를 전제로 하던
 	// 테이블들(members 포함, 총 14개+users 컬럼 일부)이 새 DB에서는 아예
 	// 생성되지 않던 문제 - 아래 두 함수가 이를 한 번에 복구한다.]
@@ -343,7 +346,11 @@ func main() {
 	r.Get("/api/admin/search-trends", app.ApiAdminSearchTrendsListHandler)
 	r.Post("/api/admin/search-trends/delete", app.ApiAdminSearchTrendsDeleteHandler)
 	r.Post("/api/admin/search-trends/delete-all", app.ApiAdminSearchTrendsDeleteAllHandler)
-	r.Get("/api/admin/users/{id}/ip-history", app.ApiAdminUserIPHistoryHandler)
+	r.Get("/api/admin/users/{targetUserID}/ip-history", app.ApiAdminUserIPHistoryHandler)
+	r.Post("/api/admin/users/{targetUserID}/staff", app.ApiAdminUserStaffHandler)
+	r.Post("/api/admin/users/{targetUserID}/suspend", app.ApiAdminUserSuspendHandler)
+	r.Post("/api/admin/users/{targetUserID}/unsuspend", app.ApiAdminUserUnsuspendHandler)
+	r.Get("/api/admin/users/{targetUserID}/summary", app.ApiAdminUserSummaryHandler)
 	r.Get("/api/all_comments", app.ApiGetAllCommentsHandler)
 	r.Post("/api/delete_comments", app.ApiDeleteCommentsHandler)
 

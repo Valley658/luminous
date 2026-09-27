@@ -205,6 +205,8 @@ func (a *App) ApiAdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	sort := strings.TrimSpace(r.URL.Query().Get("sort"))
+	filter := strings.TrimSpace(r.URL.Query().Get("filter"))
 	page := 1
 	if v := r.URL.Query().Get("page"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
@@ -226,7 +228,7 @@ func (a *App) ApiAdminUsersHandler(w http.ResponseWriter, r *http.Request) {
 		perPage = 100
 	}
 
-	users, total, err := models.ListAdminUsers(a.DB, q, page, perPage)
+	users, total, err := models.ListAdminUsers(a.DB, q, sort, filter, page, perPage)
 	if err != nil {
 		httputil.JSON(w, http.StatusInternalServerError, map[string]any{"success": false, "message": "서버 오류가 발생했습니다."})
 		return

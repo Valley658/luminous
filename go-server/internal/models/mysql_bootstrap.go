@@ -35,6 +35,11 @@ func InitMySQLMissingTables(d *pdb.DB) error {
 		`ALTER TABLE users ADD COLUMN total_attendance INT DEFAULT 0`,
 		`ALTER TABLE users ADD COLUMN consecutive_attendance INT DEFAULT 0`,
 		`ALTER TABLE users ADD COLUMN last_attendance_date DATE`,
+		`ALTER TABLE users ADD COLUMN is_staff INT DEFAULT 0`,
+		`ALTER TABLE users ADD COLUMN staff_role VARCHAR(50) NULL`,
+		`ALTER TABLE users ADD COLUMN suspended INT DEFAULT 0`,
+		`ALTER TABLE users ADD COLUMN suspended_reason VARCHAR(255) NULL`,
+		`ALTER TABLE users ADD COLUMN suspended_at TIMESTAMP NULL`,
 	} {
 		_, _ = d.Exec(s)
 	}

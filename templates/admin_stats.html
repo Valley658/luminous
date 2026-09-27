@@ -405,12 +405,23 @@
                 <div class="search-row">
                     <input type="text" id="userSearchInput" placeholder="이메일 / 닉네임 / 아이디 / 디스코드로 검색">
                     <button class="btn" id="btnUserSearch"><i class="fas fa-magnifying-glass"></i> 검색</button>
+                    <select id="userSortSelect" style="background:var(--bg-elevated); border:1px solid var(--border-line); color:var(--text-primary); padding:7px 10px; border-radius:6px; font-size:13px; font-family:inherit;">
+                        <option value="id_desc">최신 가입순</option>
+                        <option value="id_asc">오래된 가입순</option>
+                        <option value="updated_desc">최근 활동순</option>
+                        <option value="nickname_asc">닉네임순</option>
+                    </select>
+                    <select id="userFilterSelect" style="background:var(--bg-elevated); border:1px solid var(--border-line); color:var(--text-primary); padding:7px 10px; border-radius:6px; font-size:13px; font-family:inherit;">
+                        <option value="">전체 회원</option>
+                        <option value="staff">운영진만</option>
+                        <option value="suspended">정지된 회원만</option>
+                    </select>
                 </div>
                 <div class="card wide">
                     <div class="data-table-wrap">
                         <table class="data-table users-table">
-                            <thead><tr><th></th><th>ID</th><th>이메일</th><th>닉네임</th><th>로그인ID</th><th>디스코드</th><th>채널</th><th>최근 IP</th><th>가입일</th><th>최근 수정일</th><th></th></tr></thead>
-                            <tbody id="usersTableBody"><tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">불러오는 중...</td></tr></tbody>
+                            <thead><tr><th></th><th>ID</th><th>이메일</th><th>닉네임</th><th>로그인ID</th><th>디스코드</th><th>채널</th><th>최근 IP</th><th>상태</th><th>가입일</th><th>최근 수정일</th><th></th></tr></thead>
+                            <tbody id="usersTableBody"><tr><td colspan="11" style="text-align:center; padding:30px; color:var(--text-muted);">불러오는 중...</td></tr></tbody>
                         </table>
                     </div>
                     <div class="pagination" id="usersPagination"></div>
@@ -808,18 +819,21 @@ function userAvatarHtml(u) {
     }
     return `<div class="user-avatar-fallback" style="background:${color};">${escapeHtml(label)}</div>`;
 }
-let usersCurrentPage = 1, usersCurrentQuery = "";
+let usersCurrentPage = 1, usersCurrentQuery = "", usersCurrentList = [];
 async function loadUsers(page) {
     usersCurrentPage = page;
     const body = document.getElementById("usersTableBody");
-    body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> 불러오는 중...</td></tr>';
+    body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> 불러오는 중...</td></tr>';
     try {
-        const params = new URLSearchParams({ page, per_page: 30, q: usersCurrentQuery });
+        const sort = document.getElementById("userSortSelect").value;
+        const filter = document.getElementById("userFilterSelect").value;
+        const params = new URLSearchParams({ page, per_page: 30, q: usersCurrentQuery, sort, filter });
         const res = await fetch("/api/admin/users?" + params.toString());
         const data = await res.json();
         if (!data.success) throw new Error(data.message || data.error || "조회 실패");
+        usersCurrentList = data.users || [];
         if (!data.users.length) {
-            body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">결과가 없습니다.</td></tr>';
+            body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px; color:var(--text-muted);">결과가 없습니다.</td></tr>';
         } else {
             body.innerHTML = data.users.map(u => `<tr>
                 <td>${userAvatarHtml(u)}</td>
@@ -830,9 +844,13 @@ async function loadUsers(page) {
                 <td>${escapeHtml(u.discord_username || "없음")}</td>
                 <td>${u.channel_id ? '<span class="channel-badge"><i class="fas fa-tv"></i> 보유</span>' : '<span style="color:var(--text-faint);">없음</span>'}</td>
                 <td>${u.last_ip ? `${escapeHtml(u.last_ip)} <button class="toolbar-btn" style="padding:2px 6px; font-size:11px;" title="접속 IP 이력" onclick="showUserIPHistory(${u.id}, '${escapeHtml(u.nickname || u.email || "").replace(/'/g, "\\'")}')"><i class="fas fa-clock-rotate-left"></i></button>` : "없음"}</td>
+                <td>${u.suspended ? '<span style="color:#f87171; font-weight:600;"><i class="fas fa-ban"></i> 정지됨</span>' : ""}${u.is_staff ? ` <span style="color:#38bdf8;"><i class="fas fa-shield"></i> ${escapeHtml(u.staff_role || "운영진")}</span>` : ""}${(!u.suspended && !u.is_staff) ? '<span style="color:var(--text-faint);">-</span>' : ""}</td>
                 <td title="${escapeHtml(u.created_at || "")}">${escapeHtml((u.created_at || "").slice(0, 10) || "없음")}</td>
                 <td title="${escapeHtml(u.updated_at || "")}">${escapeHtml((u.updated_at || "").slice(0, 10) || "없음")}</td>
-                <td><button class="toolbar-btn danger" title="회원 삭제" onclick="deleteUser(${u.id}, '${escapeHtml(u.nickname || u.email || "").replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button></td>
+                <td style="white-space:nowrap;">
+                    <button class="toolbar-btn" title="상세/관리" onclick="showUserPanel(${u.id})"><i class="fas fa-user-gear"></i></button>
+                    <button class="toolbar-btn danger" title="회원 삭제" onclick="deleteUser(${u.id}, '${escapeHtml(u.nickname || u.email || "").replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button>
+                </td>
             </tr>`).join("");
         }
         const totalPages = Math.max(1, Math.ceil(data.total / data.per_page));
@@ -863,6 +881,92 @@ async function deleteUser(userId, label) {
         showToast('삭제 실패: ' + e.message, 'error');
     }
 }
+document.getElementById("userSortSelect").addEventListener("change", () => loadUsers(1));
+document.getElementById("userFilterSelect").addEventListener("change", () => loadUsers(1));
+
+async function showUserPanel(userId) {
+    const u = usersCurrentList.find(x => x.id === userId);
+    if (!u || typeof Swal === "undefined") return;
+    const label = u.nickname || u.email || String(userId);
+    const html = `
+        <div style="text-align:left; font-size:13px;">
+            <div id="userPanelSummary" style="margin-bottom:14px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> 활동 요약 불러오는 중...</div>
+            <div style="border-top:1px solid #333; padding-top:12px; margin-bottom:12px;">
+                <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <input type="checkbox" id="panelIsStaff" ${u.is_staff ? "checked" : ""}> 운영진으로 표시
+                </label>
+                <input type="text" id="panelStaffRole" placeholder="역할 라벨 (예: 모더레이터)" value="${escapeHtml(u.staff_role || "")}" style="width:100%; background:var(--bg-elevated); border:1px solid var(--border-line); color:var(--text-primary); padding:6px 10px; border-radius:6px; font-size:12px; font-family:inherit; margin-bottom:8px;">
+                <button class="btn" id="panelSaveStaffBtn" style="width:100%;">저장</button>
+            </div>
+            <div style="border-top:1px solid #333; padding-top:12px;">
+                ${u.suspended
+                    ? `<div style="color:#f87171; margin-bottom:8px;">현재 정지됨${u.suspended_reason ? " - " + escapeHtml(u.suspended_reason) : ""}</div><button class="btn" id="panelUnsuspendBtn" style="width:100%;">정지 해제</button>`
+                    : `<input type="text" id="panelSuspendReason" placeholder="정지 사유 (선택)" style="width:100%; background:var(--bg-elevated); border:1px solid var(--border-line); color:var(--text-primary); padding:6px 10px; border-radius:6px; font-size:12px; font-family:inherit; margin-bottom:8px;"><button class="toolbar-btn danger" id="panelSuspendBtn" style="width:100%;">계정 정지</button>`}
+            </div>
+        </div>`;
+    Swal.fire({ title: `${label} 관리`, html, background: "#1c1c1c", color: "#fff", showConfirmButton: true, confirmButtonText: "닫기", width: 420, didOpen: () => {
+        fetch(`/api/admin/users/${userId}/summary`).then(r => r.json()).then(data => {
+            const el = document.getElementById("userPanelSummary");
+            if (!el) return;
+            if (!data.success) { el.textContent = "활동 요약을 불러오지 못했습니다."; return; }
+            const s = data.summary || {};
+            el.innerHTML = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                    <div>팬아트 ${s.fanart_count ?? 0}개</div>
+                    <div>댓글 ${s.comment_count ?? 0}개</div>
+                    <div>게시글 ${s.post_count ?? 0}개</div>
+                    <div>신고당함 ${s.reported_count ?? 0}회</div>
+                    <div>출석 ${s.attendance_days ?? 0}일</div>
+                    <div>포인트 ${s.points ?? 0}</div>
+                    <div>로그인 이력 ${s.login_count ?? 0}건</div>
+                </div>`;
+        }).catch(() => { const el = document.getElementById("userPanelSummary"); if (el) el.textContent = "활동 요약을 불러오지 못했습니다."; });
+
+        const staffBtn = document.getElementById("panelSaveStaffBtn");
+        if (staffBtn) staffBtn.addEventListener("click", async () => {
+            const isStaff = document.getElementById("panelIsStaff").checked;
+            const staffRole = document.getElementById("panelStaffRole").value.trim();
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/staff`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ is_staff: isStaff, staff_role: staffRole }),
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message || "저장 실패");
+                showToast("저장했습니다.", "success");
+                Swal.close();
+                loadUsers(usersCurrentPage);
+            } catch (e) { showToast("저장 실패: " + e.message, "error"); }
+        });
+        const suspendBtn = document.getElementById("panelSuspendBtn");
+        if (suspendBtn) suspendBtn.addEventListener("click", async () => {
+            const reason = document.getElementById("panelSuspendReason").value.trim();
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/suspend`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reason }),
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message || "정지 실패");
+                showToast("계정을 정지했습니다.", "success");
+                Swal.close();
+                loadUsers(usersCurrentPage);
+            } catch (e) { showToast("정지 실패: " + e.message, "error"); }
+        });
+        const unsuspendBtn = document.getElementById("panelUnsuspendBtn");
+        if (unsuspendBtn) unsuspendBtn.addEventListener("click", async () => {
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/unsuspend`, { method: "POST" });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.message || "해제 실패");
+                showToast("정지를 해제했습니다.", "success");
+                Swal.close();
+                loadUsers(usersCurrentPage);
+            } catch (e) { showToast("해제 실패: " + e.message, "error"); }
+        });
+    } });
+}
+
 async function banIPPrompt(ip) {
     if (typeof Swal === "undefined") {
         const reason = prompt(`"${ip}" 를 차단할까요? 사유(선택):`);

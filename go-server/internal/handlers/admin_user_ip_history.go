@@ -17,7 +17,7 @@ func (a *App) ApiAdminUserIPHistoryHandler(w http.ResponseWriter, r *http.Reques
 		httputil.JSONError(w, http.StatusForbidden, "권한이 없습니다.")
 		return
 	}
-	userID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	userID, err := strconv.ParseInt(chi.URLParam(r, "targetUserID"), 10, 64)
 	if err != nil || userID <= 0 {
 		httputil.JSONError(w, http.StatusBadRequest, "잘못된 회원 ID입니다.")
 		return

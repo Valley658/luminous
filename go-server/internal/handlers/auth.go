@@ -179,6 +179,15 @@ func (a *App) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if status, serr := models.GetUserSuspensionStatus(a.DB, user.ID); serr == nil && status.Suspended {
+		msg := "정지된 계정입니다."
+		if status.Reason != "" {
+			msg += " (사유: " + status.Reason + ")"
+		}
+		httputil.JSONError(w, 403, msg)
+		return
+	}
+
 	sess := middleware.GetSession(r)
 	sess.Set("user_id", user.ID)
 	sess.Set("user_nickname", user.NicknameOr(""))
@@ -220,6 +229,18 @@ func (a *App) Me(w http.ResponseWriter, r *http.Request) {
 	if err != nil || user == nil {
 		sess.Clear()
 		out := map[string]any{"logged_in": false}
+		for k, v := range flash {
+			out[k] = v
+		}
+		httputil.JSON(w, 200, out)
+		return
+	}
+	// [2026-09-27: 관리자가 계정을 정지시켰는데 세션 쿠키가 이미 발급돼있는
+	// 유저는 재로그인 전까진 계속 로그인 상태였음 - /api/me는 프론트가 페이지
+	// 로드마다 호출하므로 여기서 매번 확인해서 즉시 강제 로그아웃시킨다.]
+	if status, serr := models.GetUserSuspensionStatus(a.DB, userID); serr == nil && status.Suspended {
+		sess.Clear()
+		out := map[string]any{"logged_in": false, "suspended": true, "suspended_reason": status.Reason}
 		for k, v := range flash {
 			out[k] = v
 		}
@@ -343,6 +364,15 @@ func (a *App) DiscordLoginCallback(w http.ResponseWriter, r *http.Request) {
 	user, err := models.GetUserByDiscordID(a.DB, discordID)
 	if err != nil || user == nil {
 		sess.Set("flash_discord_error", "이 디스코드 계정에 연동된 사이트 계정이 없습니다. 먼저 아이디/비밀번호로 가입한 뒤 프로필에서 디스코드를 연동해주세요.")
+		http.Redirect(w, r, nextURL, http.StatusFound)
+		return
+	}
+	if status, serr := models.GetUserSuspensionStatus(a.DB, user.ID); serr == nil && status.Suspended {
+		msg := "정지된 계정입니다."
+		if status.Reason != "" {
+			msg += " (사유: " + status.Reason + ")"
+		}
+		sess.Set("flash_discord_error", msg)
 		http.Redirect(w, r, nextURL, http.StatusFound)
 		return
 	}
