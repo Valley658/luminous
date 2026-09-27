@@ -1,8 +1,15 @@
 package models
 
 import (
+	"regexp"
+
 	pdb "pastellive/internal/db"
 )
+
+// [2026-09-27] handlers.junkSearchPattern과 같은 목적의 패턴을 여기서도 씀(순환
+// import를 피하려고 handlers 패키지 걸 재사용하는 대신 복제함). 이미 DB에 쌓여있는
+// SQLi 프로브 문자열들을 한 번 정리하기 위한 용도.
+var junkKeywordPattern = regexp.MustCompile(`(?i)['"<>;` + "`" + `]|--|/\*|\bunion\b|\bselect\b|\binsert\b|\bdelete\b|\bdrop\b|\bscript\b|\balert\(|\bOR\b\s*['"]?\s*\d|\bAND\b\s*\d+\s*=\s*\d+|\bCASE\s+WHEN\b|\bTHEN\b|\bELSE\b|\bEND\b|\bCHAR\(|\bJSON\(|\bCAST\(|\bCONCAT\(|\bSLEEP\(|\bBENCHMARK\(|%2[27]|%3[bB]|\d+\s*=\s*\d+`)
 
 func InitSearchTrendsTable(d *pdb.DB) error {
 	if d.Backend == "mysql" {
@@ -72,5 +79,35 @@ func CleanupStaleSearchTrends(d *pdb.DB) (int64, error) {
 		return 0, err
 	}
 	n, _ := res.RowsAffected()
+
+	if junkN, jerr := CleanupJunkSearchTrends(d); jerr == nil {
+		n += junkN
+	}
 	return n, nil
+}
+
+// CleanupJunkSearchTrends: 이미 쌓여있는 SQLi 프로브성 "검색어" 행들을 지운다.
+// 서버 재배포 후 주기 작업(24시간마다) 때 같이 돌아서 기존에 오염된 데이터도
+// 자연스럽게 정리됨.
+func CleanupJunkSearchTrends(d *pdb.DB) (int64, error) {
+	rows, err := d.Query("SELECT keyword FROM search_trends")
+	if err != nil {
+		return 0, err
+	}
+	var junk []string
+	for rows.Next() {
+		var kw string
+		if rows.Scan(&kw) == nil && junkKeywordPattern.MatchString(kw) {
+			junk = append(junk, kw)
+		}
+	}
+	rows.Close()
+	var deleted int64
+	for _, kw := range junk {
+		if res, derr := d.Exec("DELETE FROM search_trends WHERE keyword = ?", kw); derr == nil {
+			n, _ := res.RowsAffected()
+			deleted += n
+		}
+	}
+	return deleted, nil
 }

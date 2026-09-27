@@ -139,9 +139,21 @@ func (a *App) ApiSearchLocalIndexHandler(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, map[string]any{"success": true, "items": items})
 }
 
-var junkSearchPattern = regexp.MustCompile(`(?i)['"<>;` + "`" + `]|--|/\*|\bunion\b|\bselect\b|\binsert\b|\bdelete\b|\bdrop\b|\bscript\b|\balert\(|\bOR\b\s*['"]?\s*\d`)
+// [2026-09-27] 관리자 대시보드 "인기 검색어"에 SQL injection 프로브 문자열(예:
+// "(CASE WHEN 6156=7492 THEN ... END)", "test AND 6923=6916", "%27", "%22" 등)이
+// 섞여 나오는 문제가 있었음. 실제 DB 쿼리는 전부 파라미터 바인딩이라 인젝션 자체는
+// 안 통했지만, 이런 자동화 스캐너의 프로브 문자열이 "검색어"로 그대로 로그/집계돼서
+// 통계를 오염시키고 있었음. 기존 패턴은 UNION/SELECT 등 일부 키워드만 걸렀는데,
+// CASE/WHEN/AND/OR 기반 블라인드 SQLi나 URL 이중 인코딩(%27, %22)은 못 걸렀어서
+// 목록을 크게 보강함.
+var junkSearchPattern = regexp.MustCompile(`(?i)['"<>;` + "`" + `]|--|/\*|\bunion\b|\bselect\b|\binsert\b|\bdelete\b|\bdrop\b|\bscript\b|\balert\(|\bOR\b\s*['"]?\s*\d|\bAND\b\s*\d+\s*=\s*\d+|\bCASE\s+WHEN\b|\bTHEN\b|\bELSE\b|\bEND\b|\bCHAR\(|\bJSON\(|\bCAST\(|\bCONCAT\(|\bSLEEP\(|\bBENCHMARK\(|%2[27]|%3[bB]|\d+\s*=\s*\d+`)
 
 func isJunkSearchTerm(term string) bool {
+	trimmed := strings.TrimSpace(term)
+	// 정상적인 검색어치고 너무 길면(SQLi 페이로드는 보통 김) 그냥 걸러버림.
+	if len(trimmed) > 60 {
+		return true
+	}
 	return junkSearchPattern.MatchString(term)
 }
 
