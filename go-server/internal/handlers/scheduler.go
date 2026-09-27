@@ -95,6 +95,11 @@ func (a *App) StartBackgroundScheduler() {
 			log.Printf("search_trends 7일 지난 검색어 정리됨: %d개", n)
 		}
 	})
+	runEvery(24*time.Hour, true, func() {
+		if n, err := models.DeleteOldPageViews(a.DB, 90); err == nil && n > 0 {
+			log.Printf("page_views 90일 지난 방문 기록 정리됨: %d개", n)
+		}
+	})
 	runDailyAt(23, 10, a.runWebpBackfillJob)
 	runDailyAt(23, 35, a.cleanupOrphanFanartImages)
 	runDailyAt(9, 0, a.runWeeklyDigestJob)

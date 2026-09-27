@@ -169,6 +169,9 @@ func main() {
 	if err := models.InitPlaylistVideoItemsTable(database); err != nil {
 		log.Fatalf("user_playlist_videos 테이블 초기화 실패: %v", err)
 	}
+	if err := models.InitPageViewsTable(database); err != nil {
+		log.Fatalf("page_views 테이블 초기화 실패: %v", err)
+	}
 	// [2026-09-21: MySQL 백엔드에서 삭제된 옛 Python 앱 스키마를 전제로 하던
 	// 테이블들(members 포함, 총 14개+users 컬럼 일부)이 새 DB에서는 아예
 	// 생성되지 않던 문제 - 아래 두 함수가 이를 한 번에 복구한다.]
@@ -198,6 +201,7 @@ func main() {
 	r.Use(plmw.SessionMiddleware(sessionStore))
 	r.Use(plmw.CSRFGuard)
 	r.Use(adminHostnameGate(app, cfg))
+	r.Use(app.TrackPageView)
 
 	fileServer := http.FileServer(http.Dir(cfg.StaticDir))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
@@ -315,6 +319,7 @@ func main() {
 	r.Get("/api/admin/db-overview", app.ApiAdminDBOverviewHandler)
 	r.Get("/api/admin/audit-log", app.ApiAdminAuditLogHandler)
 	r.Get("/api/admin/rate-limit", app.ApiAdminRateLimitHandler)
+	r.Get("/api/admin/traffic", app.ApiAdminTrafficHandler)
 	r.Get("/api/all_comments", app.ApiGetAllCommentsHandler)
 	r.Post("/api/delete_comments", app.ApiDeleteCommentsHandler)
 

@@ -310,6 +310,15 @@ func InitMySQLMissingTables(d *pdb.DB) error {
 		CHECK (reaction IN ('like', 'dislike'))
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
 
+	// --- page_views.go: page_views (트래픽 검사 대시보드) ---
+	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS page_views (
+		id INT PRIMARY KEY AUTO_INCREMENT,
+		path VARCHAR(255) NOT NULL,
+		ip_address VARCHAR(45) NULL,
+		viewed_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+		INDEX idx_page_views_viewed_at (viewed_at)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`)
+
 	// NOTE: "blocked_bots" is intentionally NOT created here. It's named in
 	// admin_dashboard.go's DB overview list, but nothing in this repo ever
 	// reads or writes to it - a dead reference to an old Python-app feature

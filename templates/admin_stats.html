@@ -346,7 +346,7 @@
                 <button class="nav-item active" data-tab="dashboard"><i class="fas fa-gauge-high"></i> 대시보드</button>
                 <button class="nav-item" data-tab="users"><i class="fas fa-users"></i> 회원 관리</button>
                 <button class="nav-item" data-tab="dbstat"><i class="fas fa-database"></i> DB 현황</button>
-                <button class="nav-item" data-tab="ratelimit"><i class="fas fa-shield-halved"></i> 트래픽 제한</button>
+                <button class="nav-item" data-tab="ratelimit"><i class="fas fa-chart-line"></i> 트래픽</button>
                 <button class="nav-item" data-tab="serverlog"><i class="fas fa-server"></i> 서버 로그</button>
                 <button class="nav-item" data-tab="auditlog"><i class="fas fa-user-shield"></i> 활동 로그</button>
                 <div class="sidebar-section-label">콘텐츠 관리</div>
@@ -415,10 +415,32 @@
             </section>
 
             <section class="tab-panel" id="tab-ratelimit">
+                <div class="stat-row" id="trafficStatRow"></div>
+                <div class="grid">
+                    <div class="card wide">
+                        <h2>
+                            <span>최근 14일 방문자 · 페이지뷰 추이</span>
+                            <button class="toolbar-btn" id="btnTrafficRefresh"><i class="fas fa-rotate"></i> 새로고침</button>
+                        </h2>
+                        <canvas id="dailyTrafficChart"></canvas>
+                    </div>
+                    <div class="card wide">
+                        <h2>오늘 시간대별 페이지뷰</h2>
+                        <canvas id="hourlyTrafficChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h2>오늘 많이 본 경로 TOP 10</h2>
+                        <div class="data-table-wrap">
+                            <table class="data-table">
+                                <thead><tr><th>경로</th><th>조회수</th></tr></thead>
+                                <tbody id="topPathsTableBody"><tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted);">불러오는 중...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 <div class="card wide">
                     <h2>
                         <span><i class="fas fa-shield-halved"></i> IP별 요청 속도 제한 현황 <span id="rlConfigChip" style="color:var(--text-faint); font-weight:normal;"></span></span>
-                        <button class="toolbar-btn" id="btnRateLimitRefresh"><i class="fas fa-rotate"></i> 새로고침</button>
                     </h2>
                     <div class="data-table-wrap">
                         <table class="data-table" id="rateLimitTable">
@@ -515,7 +537,7 @@ const COLORS = [ "#38bdf8", "#f472b6", "#a78bfa", "#34d399", "#fbbf24", "#fb7185
 Chart.defaults.color = "#9a9ea8";
 Chart.defaults.borderColor = "#262a34";
 
-const PAGE_TITLES = { dashboard: "대시보드", users: "회원 관리", dbstat: "DB 현황", ratelimit: "트래픽 제한", serverlog: "서버 로그", auditlog: "활동 로그", reports: "신고 관리", comments: "댓글 관리", inquiries: "문의 관리" };
+const PAGE_TITLES = { dashboard: "대시보드", users: "회원 관리", dbstat: "DB 현황", ratelimit: "트래픽", serverlog: "서버 로그", auditlog: "활동 로그", reports: "신고 관리", comments: "댓글 관리", inquiries: "문의 관리" };
 const loadedTabs = new Set();
 
 let staffRoleLabels = {};
@@ -566,7 +588,7 @@ function switchTab(tab) {
         else if (tab === "users") loadUsers(1);
         else if (tab === "dbstat") loadDbOverview();
         else if (tab === "serverlog") loadServerLog();
-        else if (tab === "ratelimit") loadRateLimit();
+        else if (tab === "ratelimit") loadTraffic();
         else if (tab === "auditlog") loadAuditLog();
         else if (tab === "reports") loadReports();
         else if (tab === "comments") loadComments();
@@ -915,36 +937,91 @@ async function loadAuditLog() {
 }
 document.getElementById("btnAuditRefresh").addEventListener("click", loadAuditLog);
 
-async function loadRateLimit() {
-    const body = document.getElementById("rateLimitTableBody");
+let dailyTrafficChartInstance = null;
+let hourlyTrafficChartInstance = null;
+
+async function loadTraffic() {
+    const rlBody = document.getElementById("rateLimitTableBody");
     const chip = document.getElementById("rlConfigChip");
+    const statRow = document.getElementById("trafficStatRow");
+    const topBody = document.getElementById("topPathsTableBody");
     try {
-        const res = await fetch("/api/admin/rate-limit");
+        const res = await fetch("/api/admin/traffic");
         const data = await res.json();
-        if (!data.success) throw new Error(data.message || data.error || "조회 실패");
-        if (!data.enabled) {
-            chip.textContent = "(비활성화됨)";
-            body.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:20px;">요청 속도 제한이 꺼져 있습니다 (RATE_LIMIT_ENABLED=false).</td></tr>';
+        if (!data.success) throw new Error(data.message || data.error || "트래픽 조회 실패");
+
+        const daily = data.daily || [];
+        const todayViews = daily.length ? daily[daily.length - 1].views : 0;
+        const todayVisitors = daily.length ? daily[daily.length - 1].visitors : 0;
+        statRow.innerHTML = [
+            { label: "실시간 접속자 수", value: data.online_now ?? 0, sub: "최근 5분 이내 (IP 기준)" },
+            { label: "오늘 페이지뷰", value: todayViews, sub: "자정부터 누적" },
+            { label: "오늘 방문자(순)", value: todayVisitors, sub: "IP 기준" },
+        ].map(s => `<div class="stat-pill"><div class="label">${s.label}</div><div class="value">${Number(s.value).toLocaleString()}</div><div class="sub">${s.sub}</div></div>`).join("");
+
+        if (dailyTrafficChartInstance) dailyTrafficChartInstance.destroy();
+        dailyTrafficChartInstance = new Chart(document.getElementById("dailyTrafficChart"), {
+            type: "line",
+            data: {
+                labels: daily.map(r => r.date.slice(5)),
+                datasets: [ {
+                    label: "페이지뷰",
+                    data: daily.map(r => r.views),
+                    borderColor: "#38bdf8",
+                    backgroundColor: "rgba(56,189,248,0.15)",
+                    tension: .3,
+                    fill: true
+                }, {
+                    label: "방문자(순, IP 기준)",
+                    data: daily.map(r => r.visitors),
+                    borderColor: "#34d399",
+                    backgroundColor: "rgba(52,211,153,0.15)",
+                    tension: .3,
+                    fill: true
+                } ]
+            },
+            options: { responsive: true, plugins: { legend: { labels: { color: "#9a9ea8" } } } }
+        });
+
+        const hourly = data.hourly || [];
+        if (hourlyTrafficChartInstance) hourlyTrafficChartInstance.destroy();
+        hourlyTrafficChartInstance = new Chart(document.getElementById("hourlyTrafficChart"), {
+            type: "bar",
+            data: {
+                labels: hourly.map(r => r.hour + "시"),
+                datasets: [ { label: "페이지뷰", data: hourly.map(r => r.views), backgroundColor: "#a78bfa" } ]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        const topPaths = data.top_paths || [];
+        topBody.innerHTML = topPaths.length
+            ? topPaths.map(p => `<tr><td>${escapeHtml(p.path)}</td><td>${p.views}</td></tr>`).join("")
+            : '<tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted);">오늘 기록된 방문이 없습니다.</td></tr>';
+
+        if (!data.rate_limit_enabled) {
+            chip.textContent = "(요청 속도 제한 비활성화됨)";
+            rlBody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:20px;">요청 속도 제한이 꺼져 있습니다 (RATE_LIMIT_ENABLED=false).</td></tr>';
             return;
         }
-        chip.textContent = `(윈도우 ${data.window_sec}초 / 최대 ${data.max_requests}건, 초과 시 ${data.ban_minutes}분 차단)`;
-        const ips = data.ips || [];
+        chip.textContent = `(윈도우 ${data.rate_limit_window_sec}초 / 최대 ${data.rate_limit_max_requests}건, 초과 시 ${data.rate_limit_ban_minutes}분 차단)`;
+        const ips = data.rate_limit_ips || [];
         if (!ips.length) {
-            body.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:20px;">최근 활동 중이거나 차단된 IP가 없습니다.</td></tr>';
+            rlBody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:20px;">최근 활동 중이거나 차단된 IP가 없습니다.</td></tr>';
             return;
         }
         ips.sort((a, b) => (b.banned - a.banned) || (b.requests_in_window - a.requests_in_window));
-        body.innerHTML = ips.map(s => `<tr>
+        rlBody.innerHTML = ips.map(s => `<tr>
             <td>${escapeHtml(s.ip || "")}</td>
             <td>${s.requests_in_window ?? 0}</td>
             <td>${s.banned ? '<span style="color:var(--danger,#e5484d); font-weight:600;">차단됨</span>' : '<span style="color:var(--text-muted);">정상</span>'}</td>
             <td>${s.banned_until ? escapeHtml(new Date(s.banned_until).toLocaleString()) : "-"}</td>
         </tr>`).join("");
     } catch (e) {
-        body.innerHTML = `<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:20px;">불러오지 못했습니다: ${escapeHtml(e.message)}</td></tr>`;
+        rlBody.innerHTML = `<tr><td colspan="4" style="color:var(--text-muted); text-align:center; padding:20px;">불러오지 못했습니다: ${escapeHtml(e.message)}</td></tr>`;
     }
 }
-document.getElementById("btnRateLimitRefresh").addEventListener("click", loadRateLimit);
+document.getElementById("btnTrafficRefresh").addEventListener("click", loadTraffic);
 
 let currentReportStatus = "pending";
 function loadReports() {
