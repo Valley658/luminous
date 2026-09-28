@@ -358,9 +358,6 @@ func main() {
 	r.Post("/api/notifications/read", app.ApiMarkNotificationsReadHandler)
 	r.Get("/api/notifications/stream", app.ApiNotificationsStreamHandler)
 
-	r.Get("/api/quiz/questions", app.ApiQuizQuestionsHandler)
-	r.Post("/api/quiz/check", app.ApiQuizCheckHandler)
-
 	r.Get("/api/schedules", app.ApiGetSchedulesHandler)
 	r.Post("/api/schedules", app.ApiCreateScheduleHandler)
 	r.Put("/api/schedules/{scheduleID}", app.ApiUpdateScheduleHandler)

@@ -312,54 +312,6 @@
         .m-lightbox-actions { display: flex; gap: 14px; }
         .m-lightbox-actions button { background: none; border: none; color:var(--text-muted); font-size: 13px; display: flex; align-items: center; gap: 5px; }
 
-        
-        .m-quiz-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 21100; display: none; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
-        .m-quiz-overlay.open { display: flex; }
-        .m-quiz-box { background:var(--bg-surface-alt); border:1px solid var(--accent); border-radius: 14px; padding: 24px; width: 100%; max-width: 380px; text-align: center; color:var(--text-primary); }
-        .m-quiz-box h3 { margin: 0 0 6px; font-size: 17px; }
-        .m-quiz-progress { color:var(--text-faint); font-size: 12px; margin-bottom: 16px; }
-        .m-quiz-statement { font-size: 15px; line-height: 1.6; min-height: 54px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-        .m-quiz-answer-row { display: flex; gap: 8px; }
-        .m-quiz-answer-row input { flex: 1; padding: 10px 12px; font-size: 14px; border-radius: 10px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); outline: none; }
-        .m-quiz-answer-row button { padding: 0 16px; font-weight: bold; border: none; border-radius: 10px; background:var(--accent); color:var(--accent-contrast); }
-        .m-quiz-choice-grid { display: flex; flex-direction: column; gap: 10px; }
-        .m-quiz-choice-btn { display: block; width: 100%; box-sizing: border-box; padding: 14px 16px; font-size: 15px; font-weight: bold; border:1px solid var(--border); border-radius: 10px; background:var(--bg-input); color:var(--text-primary); cursor: pointer; text-align: center; }
-        .m-quiz-choice-btn:active { background:var(--bg-surface); }
-        .m-quiz-choice-btn.selected { background:var(--accent); color:var(--accent-contrast); border-color:var(--accent); }
-        .m-quiz-choice-btn:disabled { opacity: 0.6; cursor: default; }
-        .m-quiz-difficulty-desc { color:var(--text-muted); font-size: 13px; margin-bottom: 20px; }
-        .m-quiz-difficulty-segmented {
-            position: relative; display: flex; background: var(--bg-input); border-radius: 14px;
-            padding: 5px; margin-bottom: 24px; box-shadow: inset 0 0 0 1px var(--border);
-        }
-        .m-quiz-difficulty-segmented-thumb {
-            position: absolute; top: 5px; left: 5px; width: calc(33.333% - 3.33px); height: calc(100% - 10px);
-            background: var(--accent); border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.3);
-            transition: transform .28s cubic-bezier(.34,1.3,.64,1);
-        }
-        .m-quiz-diff-seg-btn {
-            position: relative; z-index: 1; flex: 1; border: none; background: none; cursor: pointer;
-            padding: 11px 8px; font-size: 15px; font-weight: bold; font-family: inherit; color: var(--text-faint);
-            transition: color .2s; border-radius: 10px;
-        }
-        .m-quiz-diff-seg-btn.active { color: var(--accent-contrast); }
-        .m-quiz-difficulty-current { font-size: 14px; font-weight: bold; color: var(--accent); margin-bottom: 4px; min-height: 18px; }
-        .m-quiz-difficulty-empty-msg { color:var(--text-faint); font-size: 12px; margin-bottom: 10px; }
-        .m-quiz-difficulty-start-btn {
-            display: block; width: 100%; box-sizing: border-box; padding: 13px 20px; font-size: 15px; font-weight: bold; border: none; border-radius: 10px;
-            background:var(--accent); color:var(--accent-contrast); cursor: pointer; margin-top: 6px;
-        }
-        .m-quiz-back-btn {
-            display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color:var(--text-faint);
-            font-size: 12.5px; cursor: pointer; margin-top: 12px; padding: 4px;
-        }
-        .m-quiz-feedback { margin-top: 14px; font-size: 13px; min-height: 18px; }
-        .m-quiz-feedback.correct { color:#4ade80; }
-        .m-quiz-feedback.wrong { color:var(--danger-soft); }
-        .m-quiz-next { display: none; margin-top: 14px; padding: 8px 20px; background:var(--accent); color:var(--accent-contrast); border: none; border-radius: 18px; font-weight: bold; }
-        .m-quiz-close { margin-top: 16px; width: 100%; background:var(--border); color:var(--text-primary); border: none; padding: 10px; border-radius: 8px; font-weight: bold; }
-
-        
         .m-schedule-nav { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 12px 0; }
         .m-schedule-nav button { background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-primary); width: 30px; height: 30px; border-radius: 50%; }
         .m-schedule-day-block { margin: 0 14px 14px; border:1px solid var(--border-soft); border-radius: 10px; overflow: hidden; }
@@ -433,7 +385,6 @@
             <button class="m-drawer-item" id="m-navBookmarks"><i class="fas fa-bookmark"></i> 북마크</button>
             <button class="m-drawer-item" id="m-navPlaylists"><i class="fas fa-list"></i> 재생목록</button>
             <button class="m-drawer-item" id="m-navGallery"><i class="fas fa-image" style="color:var(--accent);"></i> 팬 갤러리</button>
-            <button class="m-drawer-item" id="m-navQuiz"><i class="fas fa-question-circle" style="color:#f5c518;"></i> 퀴즈</button>
             <button class="m-drawer-item" id="m-navSchedule"><i class="fas fa-calendar-days" style="color:#4ade80;"></i> 스케줄</button>
             <div class="m-drawer-divider"></div>
             <a class="m-drawer-item" href="https://discord.gg/swatakafam" target="_blank" style="text-decoration:none;"><i class="fab fa-discord"></i> 디스코드</a>
@@ -555,40 +506,6 @@
                     <button id="m-lightboxCommentSubmit">등록</button>
                 </div>
             </div>
-        </div>
-    </div>
-
-    
-    <div class="m-quiz-overlay" id="m-quizOverlay">
-        <div class="m-quiz-box">
-            <div id="m-quizDifficultyView">
-                <h3><i class="fas fa-question-circle" style="color:#f5c518;"></i> 스텔라이브 팬 퀴즈</h3>
-                <p class="m-quiz-difficulty-desc">난이도를 선택해주세요</p>
-                <div class="m-quiz-difficulty-current" id="m-quizDifficultyLabel">중급</div>
-                <div class="m-quiz-difficulty-segmented" id="m-quizDifficultySegmented">
-                    <div class="m-quiz-difficulty-segmented-thumb" id="m-quizDifficultyThumb"></div>
-                    <button type="button" class="m-quiz-diff-seg-btn" data-idx="0">초</button>
-                    <button type="button" class="m-quiz-diff-seg-btn" data-idx="1">중</button>
-                    <button type="button" class="m-quiz-diff-seg-btn" data-idx="2">고</button>
-                </div>
-                <div class="m-quiz-difficulty-empty-msg" id="m-quizDifficultyEmptyMsg" style="display:none;">이 난이도는 준비 중이에요!</div>
-                <button class="m-quiz-difficulty-start-btn" id="m-quizDifficultyStartBtn">시작하기</button>
-            </div>
-            <div id="m-quizQuizView" style="display:none;">
-                <h3><i class="fas fa-question-circle" style="color:#f5c518;"></i> 스텔라이브 팬 퀴즈</h3>
-                <div class="m-quiz-progress" id="m-quizProgressText"></div>
-                <div class="m-quiz-statement" id="m-quizStatementText"></div>
-                <div class="m-quiz-choice-grid" id="m-quizChoiceGrid"></div>
-                <div class="m-quiz-feedback" id="m-quizFeedbackText"></div>
-                <button class="m-quiz-next" id="m-quizNextBtn">다음 문제</button>
-            </div>
-            <div id="m-quizResultView" style="display:none;">
-                <i class="fas fa-trophy" style="font-size:40px; color:var(--accent);"></i>
-                <h4 id="m-quizScoreText" style="margin:10px 0;"></h4>
-                <p style="color:var(--text-muted); font-size:13px;">수고하셨습니다!</p>
-                <button class="m-quiz-back-btn" id="m-quizBackBtn"><i class="fas fa-rotate-left"></i> 다른 난이도로 다시 하기</button>
-            </div>
-            <button class="m-quiz-close" id="m-quizCloseBtn">닫기</button>
         </div>
     </div>
 
@@ -1123,10 +1040,6 @@ window.__skipInitialVideoReset = {{ 'true' if init_mobile_video_cards else 'fals
         openMFullView("m-galleryView");
         loadMGallery();
     });
-    document.getElementById("m-navQuiz").addEventListener("click", () => {
-        closeDrawer();
-        openMQuiz();
-    });
     document.getElementById("m-navSchedule").addEventListener("click", () => {
         openMFullView("m-scheduleView");
         initMSchedule();
@@ -1634,129 +1547,6 @@ window.__skipInitialVideoReset = {{ 'true' if init_mobile_video_cards else 'fals
         listEl.prepend(item);
         inputEl.value = "";
         showToast("댓글이 등록되었습니다.", "success");
-    });
-    let mQuizQuestions = [], mQuizCurrent = 0, mQuizScore = 0, mQuizAnswered = false;
-    const M_QUIZ_DIFFICULTY_KEYS = ["easy", "medium", "hard"];
-    const M_QUIZ_DIFFICULTY_LABELS = ["초", "중", "고"];
-    let mQuizDifficultyIndex = 1;
-    let mQuizDifficulty = M_QUIZ_DIFFICULTY_KEYS[mQuizDifficultyIndex];
-    let mQuizDifficultySegmentedInited = false;
-    function selectMQuizDifficulty(idx) {
-        mQuizDifficultyIndex = idx;
-        mQuizDifficulty = M_QUIZ_DIFFICULTY_KEYS[idx];
-        document.getElementById("m-quizDifficultyThumb").style.transform = `translateX(${idx * 100}%)`;
-        document.querySelectorAll(".m-quiz-diff-seg-btn").forEach((btn, i) => btn.classList.toggle("active", i === idx));
-        document.getElementById("m-quizDifficultyLabel").textContent = M_QUIZ_DIFFICULTY_LABELS[idx] + "급";
-        document.getElementById("m-quizDifficultyEmptyMsg").style.display = "none";
-    }
-    function initMQuizDifficultySegmented() {
-        if (mQuizDifficultySegmentedInited) return;
-        mQuizDifficultySegmentedInited = true;
-        document.querySelectorAll(".m-quiz-diff-seg-btn").forEach(btn => {
-            btn.addEventListener("click", () => selectMQuizDifficulty(parseInt(btn.dataset.idx, 10)));
-        });
-    }
-    function showMQuizDifficultyView() {
-        document.getElementById("m-quizDifficultyView").style.display = "block";
-        document.getElementById("m-quizQuizView").style.display = "none";
-        document.getElementById("m-quizResultView").style.display = "none";
-        document.getElementById("m-quizDifficultyEmptyMsg").style.display = "none";
-        initMQuizDifficultySegmented();
-        selectMQuizDifficulty(mQuizDifficultyIndex);
-    }
-    function openMQuiz() {
-        document.getElementById("m-quizOverlay").classList.add("open");
-        showMQuizDifficultyView();
-    }
-    document.getElementById("m-quizDifficultyStartBtn").addEventListener("click", () => {
-        const startBtn = document.getElementById("m-quizDifficultyStartBtn");
-        const emptyMsg = document.getElementById("m-quizDifficultyEmptyMsg");
-        startBtn.disabled = true;
-        emptyMsg.style.display = "none";
-        mQuizCurrent = 0;
-        mQuizScore = 0;
-        fetch("/api/quiz/questions?difficulty=" + encodeURIComponent(mQuizDifficulty)).then(r => r.json()).then(data => {
-            mQuizQuestions = data.questions || [];
-        }).catch(() => {
-            mQuizQuestions = [];
-        }).finally(() => {
-            startBtn.disabled = false;
-            if (!mQuizQuestions.length) {
-                emptyMsg.style.display = "block";
-                return;
-            }
-            document.getElementById("m-quizDifficultyView").style.display = "none";
-            document.getElementById("m-quizQuizView").style.display = "block";
-            document.getElementById("m-quizResultView").style.display = "none";
-            renderMQuiz();
-        });
-    });
-    document.getElementById("m-quizBackBtn").addEventListener("click", showMQuizDifficultyView);
-    document.getElementById("m-quizCloseBtn").addEventListener("click", () => document.getElementById("m-quizOverlay").classList.remove("open"));
-    function renderMQuiz() {
-        if (!mQuizQuestions.length) return;
-        const q = mQuizQuestions[mQuizCurrent];
-        document.getElementById("m-quizProgressText").textContent = mQuizCurrent + 1 + " / " + mQuizQuestions.length;
-        document.getElementById("m-quizStatementText").textContent = q.question;
-        document.getElementById("m-quizFeedbackText").textContent = "";
-        document.getElementById("m-quizFeedbackText").className = "m-quiz-feedback";
-        document.getElementById("m-quizNextBtn").style.display = "none";
-        mQuizAnswered = false;
-        const grid = document.getElementById("m-quizChoiceGrid");
-        grid.innerHTML = "";
-        const count = Math.max(1, q.answer_count || 1);
-        const selected = [];
-        (q.choices || []).forEach(choice => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "m-quiz-choice-btn";
-            btn.textContent = choice;
-            btn.onclick = () => {
-                if (btn.disabled || mQuizAnswered) return;
-                btn.disabled = true;
-                btn.classList.add("selected");
-                selected.push(choice);
-                if (selected.length >= count) submitMQuizAnswer(selected);
-            };
-            grid.appendChild(btn);
-        });
-    }
-    function submitMQuizAnswer(answers) {
-        if (mQuizAnswered || !mQuizQuestions.length) return;
-        mQuizAnswered = true;
-        Array.from(document.querySelectorAll("#m-quizChoiceGrid .m-quiz-choice-btn")).forEach(b => b.disabled = true);
-        const fb = document.getElementById("m-quizFeedbackText");
-        fetch("/api/quiz/check", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                index: mQuizCurrent,
-                difficulty: mQuizDifficulty,
-                answers: answers,
-                answer: answers.join(" ")
-            })
-        }).then(r => r.json()).then(data => {
-            if (data.correct) {
-                mQuizScore++;
-                fb.textContent = "정답입니다!";
-                fb.className = "m-quiz-feedback correct";
-            } else {
-                fb.textContent = "오답입니다. 정답은 " + data.correct_answer + " 입니다.";
-                fb.className = "m-quiz-feedback wrong";
-            }
-        }).finally(() => {
-            document.getElementById("m-quizNextBtn").style.display = "inline-block";
-        });
-    }
-    document.getElementById("m-quizNextBtn").addEventListener("click", () => {
-        mQuizCurrent++;
-        if (mQuizCurrent >= mQuizQuestions.length) {
-            document.getElementById("m-quizQuizView").style.display = "none";
-            document.getElementById("m-quizResultView").style.display = "block";
-            document.getElementById("m-quizScoreText").textContent = mQuizScore + " / " + mQuizQuestions.length + " 점";
-        } else renderMQuiz();
     });
     let mScheduleWeekStart = null, mScheduleEditingId = null;
     function mSunday(d) {
