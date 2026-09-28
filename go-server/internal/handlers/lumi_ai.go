@@ -909,6 +909,24 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 퀴즈/영상추천도 LLM 없이 처리한다(참여형 기능 + 안정성 - 문제은행/실제
+	// 영상 데이터에서만 고르므로 존재하지 않는 문제나 영상을 지어낼 위험이 없음).
+	// 퀴즈 정답 확인은 먼저 체크해야(진행 중인 퀴즈가 있을 때만 매치되는
+	// 조건이라) "퀴즈 내줘"보다 먼저 봐도 안전하다.
+	quizIdentity := lumiQuizIdentity(userID, r)
+	if len(imageBytes) == 0 && isLumiQuizAnswerRequest(quizIdentity, prompt) {
+		a.sendLumiReply(w, userID, prompt, lumiQuizAnswerReply(quizIdentity))
+		return
+	}
+	if len(imageBytes) == 0 && isLumiQuizRequest(prompt) {
+		a.sendLumiReply(w, userID, prompt, lumiQuizReply(quizIdentity, prompt))
+		return
+	}
+	if len(imageBytes) == 0 && isLumiVideoRecommendRequest(prompt) {
+		a.sendLumiReply(w, userID, prompt, a.lumiVideoRecommendReply(prompt))
+		return
+	}
+
 	ip := httputil.GetClientIP(r)
 	if ip == "" {
 		ip = "unknown"
@@ -1004,6 +1022,14 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 	if imageFact != "" {
 		systemPrompt += "\n\n" + imageFact
 	}
+	if userID != 0 {
+		if convFact := a.buildRecentConversationFact(userID); convFact != "" {
+			systemPrompt += "\n\n" + convFact
+		}
+		if interestFact := a.buildUserInterestFact(userID); interestFact != "" {
+			systemPrompt += "\n\n" + interestFact
+		}
+	}
 
 	// [2026-09-18: 작은 로컬 모델은 시스템 프롬프트 맨 위쪽에 있는 규칙보다
 	// 질문 바로 앞(맨 아래)에 있는 내용에 훨씬 강하게 영향을 받는다 - 실제로
@@ -1060,6 +1086,18 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		retryPrompt := "[중요: 방금 네 답변이 한국어가 아니라 중국어로 나왔어. 반드시 100% 한국어(한글)로만, " +
 			"중국어 한자는 단 한 글자도 섞지 말고 같은 내용을 다시 답해.]\n\n" + grounded
 		if retryReply, retryErr := a.LocalAI.Ask(ctx, systemPrompt, retryPrompt); retryErr == nil && !containsChineseHanzi(retryReply) {
+			reply = retryReply
+		} else {
+			reply = "어... 나 지금 대답이 좀 꼬였나봐! 미안해, 위에 있는 '대화내용초기화' 버튼 눌러서 다시 한번 물어봐줄래?"
+		}
+	} else if looksLikeBrokenLumiReply(reply) {
+		// [2026-09-28: 중국어로 새는 것 말고도, 작은 로컬 모델이 캐릭터를 깨고
+		// "저는 AI 언어모델입니다" 식으로 자기소개하거나 같은 단어를 반복하는
+		// 디코딩 루프에 빠지는 경우가 있었다 - 위 중국어 안전망과 같은 패턴으로
+		// 한 번 더 재시도하고, 그래도 안 되면 같은 고정 문구로 대체한다.]
+		retryPrompt := "[중요: 방금 네 답변이 이상하게 나왔어(캐릭터를 깨고 AI라고 자기소개했거나, " +
+			"같은 말을 계속 반복했어). 루미 캐릭터를 유지한 채, 반복 없이 같은 내용을 다시 자연스럽게 답해.]\n\n" + grounded
+		if retryReply, retryErr := a.LocalAI.Ask(ctx, systemPrompt, retryPrompt); retryErr == nil && !looksLikeBrokenLumiReply(retryReply) {
 			reply = retryReply
 		} else {
 			reply = "어... 나 지금 대답이 좀 꼬였나봐! 미안해, 위에 있는 '대화내용초기화' 버튼 눌러서 다시 한번 물어봐줄래?"
