@@ -909,19 +909,8 @@ func (a *App) ApiLumiAskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 퀴즈/영상추천도 LLM 없이 처리한다(참여형 기능 + 안정성 - 문제은행/실제
-	// 영상 데이터에서만 고르므로 존재하지 않는 문제나 영상을 지어낼 위험이 없음).
-	// 퀴즈 정답 확인은 먼저 체크해야(진행 중인 퀴즈가 있을 때만 매치되는
-	// 조건이라) "퀴즈 내줘"보다 먼저 봐도 안전하다.
-	quizIdentity := lumiQuizIdentity(userID, r)
-	if len(imageBytes) == 0 && isLumiQuizAnswerRequest(quizIdentity, prompt) {
-		a.sendLumiReply(w, userID, prompt, lumiQuizAnswerReply(quizIdentity))
-		return
-	}
-	if len(imageBytes) == 0 && isLumiQuizRequest(prompt) {
-		a.sendLumiReply(w, userID, prompt, lumiQuizReply(quizIdentity, prompt))
-		return
-	}
+	// 영상추천도 LLM 없이 처리한다(안정성 - 실제 영상 데이터에서만 고르므로
+	// 존재하지 않는 영상을 지어낼 위험이 없음).
 	if len(imageBytes) == 0 && isLumiVideoRecommendRequest(prompt) {
 		a.sendLumiReply(w, userID, prompt, a.lumiVideoRecommendReply(prompt))
 		return

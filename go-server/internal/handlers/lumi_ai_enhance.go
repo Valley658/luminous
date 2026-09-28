@@ -3,13 +3,9 @@ package handlers
 import (
 	"fmt"
 	"math/rand"
-	"net/http"
 	"strings"
-	"sync"
-	"time"
 
 	"pastellive/internal/data"
-	"pastellive/internal/httputil"
 	"pastellive/internal/models"
 	"pastellive/internal/video"
 )
@@ -87,104 +83,6 @@ func (a *App) buildUserInterestFact(userID int64) string {
 	}
 	return "[참고 - 이 유저의 최근 관심사, 약한 신호일 뿐이니 확실하지 않으면 굳이 " +
 		"언급하지 마]\n최근 대화에서 '" + topName + "' 얘기가 유독 자주 나왔음."
-}
-
-// =====================================================================
-// 참여형 기능: 루미가 직접 퀴즈를 내주기
-//
-// data.QuizQuestionsByDifficulty(퀴즈 페이지가 이미 쓰는 것과 같은 문제
-// 은행)에서 무작위로 하나 골라 질문만 먼저 보여주고, "정답 알려줘" 같은
-// 후속 요청이 오면 정답을 공개한다. LLM에게 문제를 만들라고 시키지 않고
-// 미리 검증된 문제 은행에서만 고르므로, 틀린 트리비아를 지어낼 위험이 없다.
-// =====================================================================
-
-type lumiPendingQuizEntry struct {
-	question  data.QuizQuestion
-	expiresAt time.Time
-}
-
-const lumiPendingQuizTTL = 5 * time.Minute
-
-var (
-	lumiPendingQuizMu sync.Mutex
-	lumiPendingQuiz   = map[string]lumiPendingQuizEntry{}
-)
-
-// lumiQuizIdentity: 퀴즈 진행 상태를 기억할 키. 로그인 유저는 계정 기준,
-// 비로그인 방문자는 IP 기준(다른 안전장치들과 같은 방식).
-func lumiQuizIdentity(userID int64, r *http.Request) string {
-	if userID != 0 {
-		return fmt.Sprintf("u:%d", userID)
-	}
-	return "ip:" + httputil.GetClientIP(r)
-}
-
-func isLumiQuizRequest(prompt string) bool {
-	if !strings.Contains(prompt, "퀴즈") {
-		return false
-	}
-	return strings.Contains(prompt, "내") || strings.Contains(prompt, "줘") ||
-		strings.Contains(prompt, "문제") || strings.Contains(prompt, "풀")
-}
-
-func isLumiQuizAnswerRequest(identity, prompt string) bool {
-	lumiPendingQuizMu.Lock()
-	entry, ok := lumiPendingQuiz[identity]
-	lumiPendingQuizMu.Unlock()
-	if !ok || time.Now().After(entry.expiresAt) {
-		return false
-	}
-	hasAnswerWord := strings.Contains(prompt, "정답") || strings.Contains(prompt, "답") ||
-		strings.Contains(prompt, "모르겠") || strings.Contains(prompt, "몰라") ||
-		strings.Contains(prompt, "포기")
-	return hasAnswerWord
-}
-
-var lumiQuizDifficultyOrder = []string{"easy", "medium", "hard"}
-
-func lumiPickQuizDifficulty(prompt string) string {
-	switch {
-	case strings.Contains(prompt, "어려운") || strings.Contains(prompt, "하드"):
-		return "hard"
-	case strings.Contains(prompt, "중간") || strings.Contains(prompt, "보통"):
-		return "medium"
-	case strings.Contains(prompt, "쉬운") || strings.Contains(prompt, "이지"):
-		return "easy"
-	default:
-		return lumiQuizDifficultyOrder[rand.Intn(len(lumiQuizDifficultyOrder))]
-	}
-}
-
-func lumiQuizReply(identity, prompt string) map[string]any {
-	difficulty := lumiPickQuizDifficulty(prompt)
-	pool := data.QuizQuestionsByDifficulty[difficulty]
-	if len(pool) == 0 {
-		return map[string]any{"success": true, "reply": "어라, 지금은 낼 수 있는 퀴즈가 없나봐! 잠시 후에 다시 물어봐줘."}
-	}
-	q := pool[rand.Intn(len(pool))]
-	lumiPendingQuizMu.Lock()
-	lumiPendingQuiz[identity] = lumiPendingQuizEntry{question: q, expiresAt: time.Now().Add(lumiPendingQuizTTL)}
-	if len(lumiPendingQuiz) > 5000 {
-		now := time.Now()
-		for k, v := range lumiPendingQuiz {
-			if now.After(v.expiresAt) {
-				delete(lumiPendingQuiz, k)
-			}
-		}
-	}
-	lumiPendingQuizMu.Unlock()
-	return map[string]any{"success": true, "reply": "퀴즈 나간다! " + q.Question + "\n(맞혀봐! 모르겠으면 \"정답 알려줘\"라고 물어봐)"}
-}
-
-func lumiQuizAnswerReply(identity string) map[string]any {
-	lumiPendingQuizMu.Lock()
-	entry, ok := lumiPendingQuiz[identity]
-	delete(lumiPendingQuiz, identity)
-	lumiPendingQuizMu.Unlock()
-	if !ok {
-		return map[string]any{"success": true, "reply": "어? 지금 풀고 있던 퀴즈가 없는데? \"퀴즈 내줘\"라고 말해봐!"}
-	}
-	return map[string]any{"success": true, "reply": "정답은 \"" + entry.question.DisplayAnswer + "\"였어! 또 낼까?"}
 }
 
 // =====================================================================
