@@ -395,14 +395,20 @@ func (f FanartRow) ToMap() map[string]any {
 }
 
 func GetFanartLatest(d *pdb.DB) ([]map[string]any, error) {
-	query := `SELECT f.id, f.user_id, f.nickname, f.image_url, f.thumbnail_url, f.lqip, f.title, f.description,
+	// [2026-09-29] 닉네임은 원래 업로드 시점에 fanart_gallery.nickname에 그대로
+	// 찍어뒀는데(스냅샷), 그러면 나중에 유저가 닉네임을 바꿔도 갤러리에는 옛날
+	// 닉네임이 계속 남아있었다("이 사람 지금 이름 아닌데?"). users 테이블을
+	// LEFT JOIN해서 지금 닉네임(u.nickname)을 우선 쓰고, 탈퇴 등으로 유저
+	// 레코드 자체가 없어진 경우에만 원래 스냅샷(f.nickname)으로 대체한다.
+	query := `SELECT f.id, f.user_id, COALESCE(u.nickname, f.nickname), f.image_url, f.thumbnail_url, f.lqip, f.title, f.description,
 		` + sqlDtFmt(d, "f.created_at") + ` as date,
 		SUM(CASE WHEN r.reaction_type = 'like' THEN 1 ELSE 0 END) as like_count,
 		SUM(CASE WHEN r.reaction_type = 'dislike' THEN 1 ELSE 0 END) as dislike_count
 		FROM fanart_gallery f
 		LEFT JOIN fanart_reactions r ON f.id = r.fanart_id
+		LEFT JOIN users u ON u.id = f.user_id
 		WHERE f.status = 'active'
-		GROUP BY f.id
+		GROUP BY f.id, f.user_id, f.nickname, u.nickname, f.image_url, f.thumbnail_url, f.lqip, f.title, f.description, f.created_at
 		ORDER BY f.id DESC LIMIT 50`
 	rows, err := d.Query(query)
 	if err != nil {
