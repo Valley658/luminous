@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -72,24 +73,45 @@ func New(templatesDir, staticDir, siteHost string) *Engine {
 	}
 }
 
+// [2026-10-01] 예전엔 템플릿을 처음 한 번만 읽고 서버가 꺼질 때까지 그대로 썼다.
+// 그래서 templates/*.html 을 고쳐도 서버를 재시작하기 전까지는 반영되지 않았다.
+// 이제 파일 수정 시각을 같이 기억해 두고, 바뀌었으면 다시 읽는다(서버 재시작 불필요).
+// 다시 읽다가 문법 오류가 나면 마지막으로 정상이던 템플릿을 계속 쓴다.
+var templateMtimes = struct {
+	sync.Mutex
+	m map[string]int64
+}{m: map[string]int64{}}
+
 func (e *Engine) get(name string) (*exec.Template, error) {
+	path := filepath.Join(e.dir, name)
+	var mtime int64
+	if info, err := os.Stat(path); err == nil {
+		mtime = info.ModTime().UnixNano()
+	}
 	e.mu.RLock()
 	tpl, ok := e.cache[name]
 	e.mu.RUnlock()
-	if ok {
+	templateMtimes.Lock()
+	same := templateMtimes.m[name] == mtime
+	templateMtimes.Unlock()
+	if ok && same {
 		return tpl, nil
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if tpl, ok := e.cache[name]; ok {
-		return tpl, nil
-	}
-	tpl, err := gonja.FromFile(filepath.Join(e.dir, name))
+	newTpl, err := gonja.FromFile(path)
 	if err != nil {
+		if ok {
+			log.Printf("[템플릿] %s 다시 읽기 실패 - 이전 버전을 계속 씀: %v", name, err)
+			return tpl, nil
+		}
 		return nil, err
 	}
-	e.cache[name] = tpl
-	return tpl, nil
+	e.cache[name] = newTpl
+	templateMtimes.Lock()
+	templateMtimes.m[name] = mtime
+	templateMtimes.Unlock()
+	return newTpl, nil
 }
 
 type assetCacheEntry struct {
