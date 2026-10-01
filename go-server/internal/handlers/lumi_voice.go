@@ -72,8 +72,8 @@ const (
 )
 
 type lumiVoiceConf struct {
-	URL, Voice, Model, Lang, Key string
-	Enabled                      bool
+	URL, Voice, Model, Lang, Key, Rev string
+	Enabled                           bool
 }
 
 func lumiVoiceEnv(key, def string) string {
@@ -90,6 +90,7 @@ func lumiVoiceConfig() lumiVoiceConf {
 		Model: lumiVoiceEnv("VOICESTUDIO_MODEL", "tts-1"),
 		Lang:  lumiVoiceEnv("VOICESTUDIO_LANGUAGE", "ko"),
 		Key:   strings.TrimSpace(os.Getenv("VOICESTUDIO_API_KEY")),
+		Rev:   strings.TrimSpace(os.Getenv("VOICESTUDIO_VOICE_REV")),
 	}
 	c.Enabled = c.Voice != ""
 	return c
@@ -102,7 +103,11 @@ func lumiTextHash(text string) string {
 
 // 파일 이름 = 목소리+모델+문장 해시. 목소리를 바꾸면 자동으로 새로 만들어진다.
 func lumiVoiceFileName(c lumiVoiceConf, text string) string {
-	sum := sha256.Sum256([]byte(c.Voice + "\n" + c.Model + "\n" + strings.TrimSpace(text)))
+	key := c.Voice + "\n" + c.Model + "\n" + strings.TrimSpace(text)
+	if c.Rev != "" { // 같은 프로필 ID에 목소리를 덮어쓴 경우 새로 녹음되게 (루미목소리_바꾸기.bat 이 올려 줌)
+		key = c.Rev + "\n" + key
+	}
+	sum := sha256.Sum256([]byte(key))
 	return hex.EncodeToString(sum[:16]) + ".mp3"
 }
 

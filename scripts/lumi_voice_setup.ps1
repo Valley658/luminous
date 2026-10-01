@@ -198,6 +198,9 @@ while (-not $chosen) {
             elseif ($def -eq 0 -and $p.Name -match "루미|lumi") { $def = $i + 1 }
             Say ("   {0,2}. {1}  ({2}){3}" -f ($i + 1), $p.Name, $p.Id, $mark)
         }
+        if ($VoiceOnly) {
+            Say "  ※ 이름이 같은 프로필이 여러 개면 '지금 쓰는 목소리'가 아닌 쪽이 새로 만든 거예요. 덮어써서 하나뿐이면 그걸 고르면 돼요." "DarkGray"
+        }
     }
     Say ""
     Say "  새 목소리가 필요하면: VoiceStudio 앱 → 목소리 만들기(Voice Design)에서" "DarkGray"
@@ -223,6 +226,12 @@ while (-not $chosen) {
 # ---------- 3. .env ----------
 Step "3/6" ".env 에 저장"
 Set-EnvValue "VOICESTUDIO_VOICE" $chosen
+if ($VoiceOnly) {
+    # 같은 프로필 ID에 새 목소리를 덮어썼을 수도 있으니, 예전에 녹음한 파일 대신 새로 녹음하게 표시를 바꾼다.
+    $rev = Get-Date -Format "yyyyMMddHHmmss"
+    Set-EnvValue "VOICESTUDIO_VOICE_REV" $rev
+    Say "  새 목소리로 처음부터 다시 녹음해요. (예전 녹음 파일은 지우지 않고 남겨 둬요)" "DarkGray"
+}
 if ($VsBase -ne "http://127.0.0.1:3900") { Set-EnvValue "VOICESTUDIO_URL" $VsBase; Say "  VOICESTUDIO_URL=$VsBase" "Green" }
 Say "  VOICESTUDIO_VOICE=$chosen  (예전 .env 는 .env.bak_lumivoice 로 백업)" "Green"
 
