@@ -29,7 +29,7 @@ function Get-EnvValue($key) {
 function Set-EnvValue($key, $value) {
     $text = ""
     if (Test-Path $EnvPath) {
-        Copy-Item $EnvPath "$EnvPath.bak_lumivoice" -Force
+        if (-not $script:EnvBackedUp) { Copy-Item $EnvPath "$EnvPath.bak_lumivoice" -Force; $script:EnvBackedUp = $true }
         $text = [IO.File]::ReadAllText($EnvPath, [Text.Encoding]::UTF8)
     }
     $nl = if ($text -match "`r`n") { "`r`n" } else { "`n" }
@@ -45,14 +45,31 @@ function Set-EnvValue($key, $value) {
 
 # ---------- VoiceStudio ----------
 function Test-VoiceStudio {
-    try { $null = Invoke-WebRequest "$VsBase/.well-known/voicestudio-speech" -UseBasicParsing -TimeoutSec 3; return $true } catch { return $false }
+    # 버전에 따라 API 포트가 다를 수 있어서 몇 개를 확인하고, 찾은 주소를 $VsBase 로 쓴다.
+    foreach ($port in @(3900, 3902)) {
+        try {
+            $null = Invoke-WebRequest "http://127.0.0.1:$port/.well-known/voicestudio-speech" -UseBasicParsing -TimeoutSec 3
+            $script:VsBase = "http://127.0.0.1:$port"
+            return $true
+        } catch { }
+    }
+    return $false
 }
 function Find-VsShortcut {
-    $dirs = @("$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:APPDATA\Microsoft\Windows\Start Menu\Programs")
+    # 바로가기(.lnk)를 먼저 찾고, 없으면 설치 폴더의 VoiceStudio.exe 를 찾는다.
+    $dirs = @("$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:APPDATA\Microsoft\Windows\Start Menu\Programs", "$env:PUBLIC\Desktop", [Environment]::GetFolderPath("Desktop"))
     foreach ($d in $dirs) {
-        if (Test-Path $d) {
+        if ($d -and (Test-Path $d)) {
             $s = Get-ChildItem $d -Recurse -Filter "VoiceStudio*.lnk" -ErrorAction SilentlyContinue | Select-Object -First 1
             if ($s) { return $s.FullName }
+        }
+    }
+    foreach ($d in @("$env:LOCALAPPDATA\Programs", $env:ProgramFiles, ${env:ProgramFiles(x86)})) {
+        if ($d -and (Test-Path $d)) {
+            $e = Get-ChildItem $d -Directory -Filter "*voicestudio*" -ErrorAction SilentlyContinue |
+                 ForEach-Object { Get-ChildItem $_.FullName -Filter "VoiceStudio*.exe" -ErrorAction SilentlyContinue } |
+                 Where-Object { $_.Name -notmatch "uninstall" } | Select-Object -First 1
+            if ($e) { return $e.FullName }
         }
     }
     return $null
@@ -75,19 +92,26 @@ function Wait-VoiceStudio($seconds) {
 function Install-VoiceStudio {
     Say "  GitHub에서 VoiceStudio 최신 버전을 찾는 중..."
     $rel = Invoke-RestMethod "https://api.github.com/repos/debpalash/VoiceStudio/releases/latest" -Headers @{ "User-Agent" = "luminous-setup" } -TimeoutSec 30
-    $asset = $rel.assets | Where-Object { $_.name -match "_x64_.*\.msi$" } | Select-Object -First 1
-    if (-not $asset) { throw "윈도우용 설치 파일(.msi)을 찾지 못했어요. https://github.com/debpalash/VoiceStudio/releases/latest 에서 직접 받아 설치해 주세요." }
+    # 0.5.4부터 윈도우 설치 파일이 .msi 에서 .exe (VoiceStudio-Electron-x.y.z-win-x64.exe) 로 바뀌었다. 둘 다 지원.
+    $asset = $rel.assets | Where-Object { $_.name -match "win-x64\.exe$" } | Select-Object -First 1
+    if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -match "_x64_.*\.msi$" -and $_.name -notmatch "Current_User" } | Select-Object -First 1 }
+    if (-not $asset) { throw "윈도우용 설치 파일을 찾지 못했어요. https://github.com/debpalash/VoiceStudio/releases/latest 에서 직접 받아 설치한 뒤 이 파일을 다시 실행해 주세요." }
     $mb = [math]::Round($asset.size / 1MB)
     Say "  찾음: $($asset.name) ($mb MB, 버전 $($rel.tag_name))"
     Say "  설치하면 디스크를 약 10GB 써요. NVIDIA 그래픽카드가 있으면 더 빨라요." "DarkGray"
     if ((Ask "  지금 내려받아 설치할까요? (Y/N)") -notmatch "^[Yy]") { throw "설치를 취소했어요." }
-    $msi = Join-Path $env:TEMP $asset.name
+    $installer = Join-Path $env:TEMP $asset.name
     Say "  내려받는 중... (크기에 따라 몇 분 걸려요)"
     $ProgressPreference = "SilentlyContinue"
-    Invoke-WebRequest $asset.browser_download_url -OutFile $msi -UseBasicParsing
-    Say "  설치 중... (설치 창이 뜨면 기다려 주세요)"
-    $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /passive /norestart" -Wait -PassThru
-    if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { throw "설치 실패 (msiexec 코드 $($p.ExitCode))" }
+    Invoke-WebRequest $asset.browser_download_url -OutFile $installer -UseBasicParsing
+    Say "  설치 중... (1~2분 걸려요)"
+    if ($installer -match "\.msi$") {
+        $p = Start-Process msiexec.exe -ArgumentList "/i `"$installer`" /passive /norestart" -Wait -PassThru
+    } else {
+        $p = Start-Process $installer -ArgumentList "/S" -Wait -PassThru   # 조용히 설치
+    }
+    if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { throw "설치 실패 (설치 프로그램 코드 $($p.ExitCode))" }
+    Start-Sleep -Seconds 3
     Say "  설치 완료!" "Green"
 }
 
@@ -192,6 +216,7 @@ while (-not $chosen) {
 # ---------- 3. .env ----------
 Step "3/6" ".env 에 저장"
 Set-EnvValue "VOICESTUDIO_VOICE" $chosen
+if ($VsBase -ne "http://127.0.0.1:3900") { Set-EnvValue "VOICESTUDIO_URL" $VsBase; Say "  VOICESTUDIO_URL=$VsBase" "Green" }
 Say "  VOICESTUDIO_VOICE=$chosen  (예전 .env 는 .env.bak_lumivoice 로 백업)" "Green"
 
 # ---------- 4. 디스코드 봇 정리 ----------
