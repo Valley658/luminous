@@ -118,7 +118,10 @@ function Install-VoiceStudio {
 function Get-Profiles {
     foreach ($path in @("/profiles", "/api/profiles", "/v1/profiles")) {
         try {
-            $r = Invoke-RestMethod "$VsBase$path" -TimeoutSec 10
+            # PowerShell 5 는 응답에 charset 이 없으면 한글을 깨뜨리므로 바이트를 UTF-8 로 직접 읽는다
+            $resp = Invoke-WebRequest "$VsBase$path" -UseBasicParsing -TimeoutSec 10
+            $bytes = $resp.RawContentStream.ToArray()
+            $r = [Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
             $list = $r
             if ($r -isnot [array]) {
                 foreach ($k in @("profiles", "items", "data", "voices")) { if ($r.$k) { $list = $r.$k; break } }
@@ -137,7 +140,7 @@ function Get-Profiles {
 
 function Test-Voice($voiceId) {
     $out = Join-Path $env:TEMP "lumi_voice_test.mp3"
-    $body = @{ model = "omnivoice"; input = "안녕! 나는 루미너스에 사는 루미야. 앞으로 내 목소리로 대답해 줄게!"; voice = $voiceId; response_format = "mp3"; language = "ko" } | ConvertTo-Json
+    $body = @{ model = "tts-1"; input = "안녕! 나는 루미너스에 사는 루미야. 앞으로 내 목소리로 대답해 줄게!"; voice = $voiceId; response_format = "mp3"; language = "ko" } | ConvertTo-Json
     Say "  시험 문장을 만드는 중... (처음엔 1분 넘게 걸릴 수 있어요)"
     Invoke-WebRequest "$VsBase/v1/audio/speech" -Method Post -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($body)) -OutFile $out -UseBasicParsing -TimeoutSec 300
     if ((Get-Item $out).Length -lt 1000) { throw "음성이 비어 있어요." }
@@ -148,6 +151,8 @@ function Test-Voice($voiceId) {
 # ==================== 시작 ====================
 Write-Host ""
 Write-Host "  루미 목소리 설치 + 루미너스 업데이트 적용" -ForegroundColor Magenta
+Write-Host "   1. VoiceStudio 설치/실행   2. 루미 목소리 고르기 + 시험 듣기   3. .env 저장" -ForegroundColor DarkGray
+Write-Host "   4. 예전 디스코드 봇 정리   5. nginx 다시 읽기   6. 빌드배포 + 고정 멘트 녹음 확인" -ForegroundColor DarkGray
 Write-Host "  ($AppDir)" -ForegroundColor DarkGray
 
 # ---------- 1. VoiceStudio ----------
@@ -195,7 +200,7 @@ while (-not $chosen) {
     Say ""
     Say "  새 목소리가 필요하면: VoiceStudio 앱 → 목소리 만들기(Voice Design)에서" "DarkGray"
     Say "    '밝고 장난스러운 10대 후반 여자, 친근한 반말' 같은 느낌으로 만들고 이름을 '루미'로 저장하세요." "DarkGray"
-    $hint = if ($profiles.Count -gt 0) { "번호 입력" + $(if ($def) { " (Enter = $def번)" } else { "" }) + " / R = 목록 새로고침 / M = ID 직접 입력" } else { "앱에서 목소리를 만든 뒤 Enter (목록 새로고침) / M = ID 직접 입력" }
+    $hint = if ($profiles.Count -gt 0) { "번호 입력" + $(if ($def) { " (Enter = ${def}번)" } else { "" }) + " / R = 목록 새로고침 / M = ID 직접 입력" } else { "앱에서 목소리를 만든 뒤 Enter (목록 새로고침) / M = ID 직접 입력" }
     $ans = Ask "  $hint :"
     if ($ans -match "^[Mm]$") { $chosen = (Ask "  목소리 ID:").Trim(); if (-not $chosen) { $chosen = $null }; continue }
     if ($ans -match "^[Rr]?$" -and -not ($ans -eq "" -and $def)) { continue }

@@ -20,7 +20,7 @@ package handlers
 // .env 설정
 //   VOICESTUDIO_VOICE=<VoiceStudio에서 만든 루미 목소리 ID>   (필수, 비우면 기능 꺼짐)
 //   VOICESTUDIO_URL=http://127.0.0.1:3900                    (기본값)
-//   VOICESTUDIO_MODEL=omnivoice                              (기본값)
+//   VOICESTUDIO_MODEL=tts-1   (기본값 - VoiceStudio 앱에서 지금 쓰는 엔진을 그대로 씀. 특정 엔진: omnivoice 등)
 //   VOICESTUDIO_LANGUAGE=ko                                  (기본값)
 //   VOICESTUDIO_API_KEY=                                     (VoiceStudio에 키를 걸었을 때만)
 
@@ -78,7 +78,7 @@ func lumiVoiceConfig() lumiVoiceConf {
 	c := lumiVoiceConf{
 		URL:   strings.TrimRight(lumiVoiceEnv("VOICESTUDIO_URL", "http://127.0.0.1:3900"), "/"),
 		Voice: lumiVoiceEnv("VOICESTUDIO_VOICE", ""),
-		Model: lumiVoiceEnv("VOICESTUDIO_MODEL", "omnivoice"),
+		Model: lumiVoiceEnv("VOICESTUDIO_MODEL", "tts-1"),
 		Lang:  lumiVoiceEnv("VOICESTUDIO_LANGUAGE", "ko"),
 		Key:   strings.TrimSpace(os.Getenv("VOICESTUDIO_API_KEY")),
 	}
