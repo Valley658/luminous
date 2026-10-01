@@ -667,7 +667,8 @@ func lumiGalleryShowReply(db *pdb.DB, lines []string) map[string]any {
 	if err != nil || !found {
 		return map[string]any{"success": true, "reply": "어라... 팬갤러리에 아직 보여줄 사진이 없나봐! 먼저 팬아트를 올려주면 다음에 보여줄 수 있어."}
 	}
-	reply := lines[rand.Intn(len(lines))]
+	line := lines[rand.Intn(len(lines))]
+	reply := line
 	if nickname.Valid && nickname.String != "" {
 		reply += " (" + nickname.String + "님이 올려주신 팬아트야"
 		if title.Valid && title.String != "" {
@@ -675,7 +676,8 @@ func lumiGalleryShowReply(db *pdb.DB, lines []string) map[string]any {
 		}
 		reply += ")"
 	}
-	return map[string]any{"success": true, "reply": reply, "image_url": imageURL}
+	// voice_text: 듣기 버튼은 미리 녹음해 둔 고정 대사만 읽는다(작가 소개는 글자로만).
+	return map[string]any{"success": true, "reply": reply, "voice_text": line, "image_url": imageURL}
 }
 
 // isLumiSiteOriginQuestion은 "사이트 제작연도는?", "루미너스 언제 생겼어?" 같은
@@ -742,9 +744,16 @@ func lumiCreatorDeflectReply(lines []string) map[string]any {
 // 저장 대상에 포함시킨다. 비로그인(userID == 0)은 SaveLumiChatMessage
 // 내부에서 이미 걸러지지만, DB 쿼리 자체를 아끼기 위해 여기서도 먼저 체크한다.
 func (a *App) sendLumiReply(w http.ResponseWriter, userID int64, prompt string, payload map[string]any) {
-	// 루미 목소리(듣기 버튼)는 루미가 실제로 한 말만 읽어 주므로 여기서 기록해 둔다(lumi_voice.go).
+	// 루미 목소리(듣기 버튼)는 루미가 실제로 한 말만 읽어 주므로 여기서 기록해 두고,
+	// 방문자가 대답을 읽는 동안 음성을 미리 만들기 시작한다(lumi_voice.go).
+	// voice_text 가 있으면(예: 팬갤러리 대사 + 작가 소개) 미리 녹음된 대사 부분만 읽는다.
 	if reply, ok := payload["reply"].(string); ok && reply != "" {
-		rememberLumiVoiceText(reply)
+		voiceText := reply
+		if v, ok := payload["voice_text"].(string); ok && v != "" {
+			voiceText = v
+		}
+		rememberLumiVoiceText(voiceText)
+		a.lumiVoicePrefetch(voiceText)
 	}
 	if userID != 0 {
 		if reply, ok := payload["reply"].(string); ok && reply != "" {

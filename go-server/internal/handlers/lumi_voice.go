@@ -377,21 +377,91 @@ func (a *App) ApiLumiVoiceHandler(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, http.StatusForbidden, "루미가 한 말만 읽어 줄 수 있어!")
 		return
 	}
-	if !lumiVoiceAllowIP(httputil.GetClientIP(r)) {
-		httputil.JSONError(w, http.StatusTooManyRequests, "목이 아파... 조금 있다가 다시 눌러줘!")
-		return
-	}
-	name, err := a.lumiVoiceEnsure(r.Context(), c, text)
-	if err != nil {
-		if err.Error() == "busy" {
-			httputil.JSONError(w, http.StatusServiceUnavailable, "다른 사람한테 읽어 주는 중이야, 조금만 있다가 다시 눌러줘!")
-			return
-		}
+	// [2026-10-02] 예전엔 여기서 음성이 다 만들어질 때까지 요청을 붙잡고 있었는데,
+	// 그래픽카드가 작아(GTX 1060 3GB) 루미 AI 직후엔 1분 넘게 걸리고 Cloudflare가
+	// 100초에서 요청을 끊어서 버튼이 계속 돌기만 했다. 이제는 백그라운드로 만들기
+	// 시작하고 바로 "준비 중"(202)을 돌려준다. 브라우저는 몇 초마다 다시 물어보고,
+	// 파일이 생기면 위의 os.Stat 에서 바로 주소를 받는다.
+	if err, failed := lumiVoiceTakeFailure(name); failed {
 		log.Printf("[루미 목소리] 생성 실패: %v", err)
 		httputil.JSONError(w, http.StatusServiceUnavailable, "지금은 목소리가 안 나와... 나중에 다시 눌러줘!")
 		return
 	}
-	writeJSON(w, map[string]any{"success": true, "url": url + name})
+	if !lumiVoiceInflight(name) {
+		if !lumiVoiceAllowIP(httputil.GetClientIP(r)) {
+			httputil.JSONError(w, http.StatusTooManyRequests, "목이 아파... 조금 있다가 다시 눌러줘!")
+			return
+		}
+		a.lumiVoiceStartBackground(c, text)
+	}
+	w.WriteHeader(http.StatusAccepted)
+	writeJSON(w, map[string]any{"success": true, "pending": true})
+}
+
+/* ---------- 백그라운드 생성 (중복 방지 + 실패 기록) ---------- */
+
+var lumiVoiceJobs = struct {
+	sync.Mutex
+	inflight map[string]bool
+	failed   map[string]error
+}{inflight: map[string]bool{}, failed: map[string]error{}}
+
+func lumiVoiceInflight(name string) bool {
+	lumiVoiceJobs.Lock()
+	defer lumiVoiceJobs.Unlock()
+	return lumiVoiceJobs.inflight[name]
+}
+
+// lumiVoiceTakeFailure 는 직전 생성이 실패했으면 그 오류를 한 번 돌려주고 지운다
+// (다음에 다시 누르면 새로 시도함).
+func lumiVoiceTakeFailure(name string) (error, bool) {
+	lumiVoiceJobs.Lock()
+	defer lumiVoiceJobs.Unlock()
+	err, ok := lumiVoiceJobs.failed[name]
+	if ok {
+		delete(lumiVoiceJobs.failed, name)
+	}
+	return err, ok
+}
+
+func (a *App) lumiVoiceStartBackground(c lumiVoiceConf, text string) {
+	name := lumiVoiceFileName(c, text)
+	lumiVoiceJobs.Lock()
+	if lumiVoiceJobs.inflight[name] {
+		lumiVoiceJobs.Unlock()
+		return
+	}
+	lumiVoiceJobs.inflight[name] = true
+	delete(lumiVoiceJobs.failed, name)
+	lumiVoiceJobs.Unlock()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), lumiVoiceGenTimeout+lumiVoiceQueueWait*2)
+		defer cancel()
+		_, err := a.lumiVoiceEnsure(ctx, c, text)
+		lumiVoiceJobs.Lock()
+		delete(lumiVoiceJobs.inflight, name)
+		if err != nil {
+			lumiVoiceJobs.failed[name] = err
+			if len(lumiVoiceJobs.failed) > 500 {
+				lumiVoiceJobs.failed = map[string]error{}
+			}
+		}
+		lumiVoiceJobs.Unlock()
+	}()
+}
+
+// lumiVoicePrefetch 는 루미가 대답하자마자 그 대답의 음성을 미리 만들기 시작한다.
+// 방문자가 대답을 읽는 동안 만들어 두면 🔊를 눌렀을 때 바로 나온다.
+func (a *App) lumiVoicePrefetch(text string) {
+	c := lumiVoiceConfig()
+	text = strings.TrimSpace(text)
+	if !c.Enabled || text == "" || utf8.RuneCountInString(text) > lumiVoiceMaxRunes {
+		return
+	}
+	if _, err := os.Stat(filepath.Join(a.lumiVoiceDir(), lumiVoiceFileName(c, text))); err == nil {
+		return
+	}
+	a.lumiVoiceStartBackground(c, text)
 }
 
 /* ---------- 고정 멘트 미리 녹음 ---------- */

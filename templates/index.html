@@ -2233,7 +2233,7 @@ function smoothScrollTrackBy(el, distance, duration) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.4/confetti.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.10.1/countUp.umd.min.js" defer></script>
     <script>
     function triggerConfetti(opts) {
@@ -4363,37 +4363,62 @@ function lumiAddVoiceButton(row, text) {
         btn.innerHTML = '<i class="fas fa-volume-up"></i>';
         btn.addEventListener("click", async () => {
             if (lumiVoiceActiveBtn === btn) { lumiVoiceStop(); return; }
+            if (btn.dataset.loading === "1") return;
             lumiVoiceStop();
-            btn.disabled = true;
+            const ready = btn._readyUrl;
+            btn.dataset.loading = "1";
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            btn.title = "루미가 목 푸는 중...";
+            btn.title = "루미가 목소리를 준비하는 중...";
             try {
-                const res = await fetch("/api/lumi/voice", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text }),
-                });
-                let data = null;
-                try { data = await res.json(); } catch (e) {}
-                if (!res.ok || !data || !data.url) {
-                    throw new Error((data && data.message) || "지금은 목소리가 안 나와...");
+                // [2026-10-02] 서버는 음성을 백그라운드로 만들고 "준비 중"(202)을 바로 돌려준다.
+                // 몇 초마다 다시 물어보다가 주소가 오면 재생한다(최대 3분).
+                const started = Date.now();
+                let url = ready || null, toasted = false;
+                while (!url) {
+                    const res = await fetch("/api/lumi/voice", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ text }),
+                    });
+                    let data = null;
+                    try { data = await res.json(); } catch (e) {}
+                    if (res.ok && data && data.url) { url = data.url; break; }
+                    if (res.status !== 202) throw new Error((data && data.message) || "지금은 목소리가 안 나와...");
+                    if (!toasted && Date.now() - started > 4000 && typeof showToast === "function") {
+                        showToast("루미가 목소리를 준비하고 있어! 처음 듣는 대답은 조금 걸릴 수 있어~", "info");
+                        toasted = true;
+                    }
+                    if (Date.now() - started > 180000) throw new Error("목소리 준비가 너무 오래 걸려... 나중에 다시 눌러줘!");
+                    await new Promise((r) => setTimeout(r, 2500));
                 }
-                const audio = new Audio(data.url);
+                const audio = new Audio(url);
                 lumiVoiceAudio = audio;
                 lumiVoiceActiveBtn = btn;
                 btn.classList.add("lumi-voice-playing");
                 btn.innerHTML = '<i class="fas fa-stop"></i>';
                 btn.title = "그만 듣기";
                 audio.addEventListener("ended", () => { if (lumiVoiceAudio === audio) lumiVoiceStop(); });
-                audio.addEventListener("error", () => { if (lumiVoiceAudio === audio) lumiVoiceStop(); });
-                await audio.play();
+                audio.addEventListener("error", () => {
+                    if (lumiVoiceAudio === audio) lumiVoiceStop();
+                    if (typeof showToast === "function") showToast("음성 파일을 불러오지 못했어...", "error");
+                });
+                try {
+                    await audio.play();
+                    btn._readyUrl = null;
+                } catch (playErr) {
+                    // 오래 기다린 뒤라 브라우저가 자동 재생을 막은 경우 - 주소를 기억해 두고 한 번 더 누르면 바로 재생
+                    lumiVoiceStop();
+                    btn._readyUrl = url;
+                    btn.innerHTML = '<i class="fas fa-play"></i>';
+                    btn.title = "준비됐어! 눌러서 듣기";
+                }
             } catch (e) {
                 lumiVoiceStop();
                 btn.innerHTML = '<i class="fas fa-volume-up"></i>';
                 btn.title = "루미 목소리로 듣기";
                 if (typeof showToast === "function") showToast(e.message || "지금은 목소리가 안 나와...", "error");
             } finally {
-                btn.disabled = false;
+                btn.dataset.loading = "";
             }
         });
         // 복사 버튼보다 앞(말풍선 바로 옆)에 둔다.
@@ -4676,7 +4701,7 @@ async function lumiAskAI(question, imageFile, imageURL, skipUserBubble) {
             thinking.bubble.appendChild(replyWrap);
             thinking.msg.classList.remove("lumi-msg-thinking");
             lumiAddCopyButton(thinking.row, () => reply);
-            lumiAddVoiceButton(thinking.row, reply);
+            lumiAddVoiceButton(thinking.row, (data.voice_text || reply).trim());
             lumiAddSticker(thinking.msg, question, reply);
             renderLumiQuickReplies(thinking.msg, question);
             const list = document.getElementById("lumiChatMessages");
