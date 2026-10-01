@@ -186,3 +186,17 @@ data/video_pool_cache.json*
 .DS_Store
 Thumbs.db
 .vscode/
+
+# 루미 목소리 음성 파일 (서버가 VoiceStudio로 자동 생성)
+static/lumi_voice/
+
+# 작업 중 백업 (2026-10-01)
+_backup_*/
+*.bak_fanartcache
+*.bak_lumivoice
+*.bak_babowiki_*
+# 크레딧 페이지에 출처가 적힌 PNGimg 그림(CC BY-NC 4.0)은 저장소에도 포함
+!static/images/pngimg/*.webp
+# 멤버 공식 노래·사진(배경음용) - 저작권 있는 원본이라 공개 저장소에는 올리지 않음
+static/music/
+*.template.bak_*

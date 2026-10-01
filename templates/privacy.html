@@ -5,142 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="{{ url_for('static', filename='logo/logo.webp') }}" type="image/webp">
     <title>개인정보처리방침 - 루미너스</title>
+    <meta name="description" content="루미너스는 「개인정보 보호법」을 지키며, 꼭 필요한 정보만 모으고 광고에 쓰지 않아요. pastellive.co.kr과 모든 하위 도메인에 적용돼요.">
     <link rel="canonical" href="https://pastellive.co.kr{{ request.path }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: 'Pretendard', 'Malgun Gothic', sans-serif; line-height: 1.7; color: #e5e7eb;
-            background: #0f0f0f; margin: 0; padding: 0 20px 60px;
-        }
-        .policy-header {
-            display: flex; align-items: center; justify-content: space-between;
-            max-width: 760px; margin: 0 auto; padding: 24px 0; border-bottom: 1px solid #262626;
-        }
-        .policy-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .policy-brand img { width: 36px; height: 36px; border-radius: 50%; }
-        .policy-brand span {
-            font-size: 19px; font-weight: 900; letter-spacing: -0.5px;
-            color: #38bdf8;
-            background: linear-gradient(90deg, #38bdf8 0%, #ffffff 45%, #a78bfa 55%, #38bdf8 100%);
-            background-size: 250% 100%; -webkit-background-clip: text; background-clip: text;
-            -webkit-text-fill-color: transparent; text-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
-            animation: luminousGlow 3s ease-in-out infinite;
-        }
-        @keyframes luminousGlow {
-            0% { background-position: 250% 0; }
-            50%, 100% { background-position: -250% 0; }
-        }
-        .back-home { color: #9ca3af; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 6px; }
-        .back-home:hover { color: #38bdf8; }
-
-        .container {
-            max-width: 760px; margin: 32px auto 0; background: #151515; border: 1px solid #262626;
-            border-radius: 16px; padding: 40px 44px;
-        }
-        h1 { color: #fff; font-size: 1.6em; margin: 0 0 8px; }
-        .subtitle { color: #8a8a8a; font-size: 0.85em; margin: 0 0 28px; }
-        h2 { color: #38bdf8; margin-top: 30px; font-size: 1.05em; border-left: 3px solid #38bdf8; padding-left: 10px; }
-        p, ul { color: #bdbdbd; font-size: 0.95em; }
-        li { margin-bottom: 6px; }
-        a { color: #38bdf8; }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="stylesheet" href="{{ versioned_static('css/policy.css') }}">
 </head>
 <body>
-    <script>try {
-    const _mbg = localStorage.getItem("lastMemberBgColor");
-    if (_mbg && document.body) {
-        document.body.style.setProperty("background-color", _mbg, "important");
-    }
-} catch (e) {}</script>
+    <header class="pc-top">
+        <div class="pc-top-inner">
+            <a class="pc-brand" href="/"><img src="{{ url_for('static', filename='logo/logo.webp') }}" alt=""><span>루미너스</span></a>
+            <nav class="pc-tabs" aria-label="안내 문서"><a href="/terms" class="">이용약관</a><a href="/privacy" class="on" aria-current="page">개인정보처리방침</a><a href="/credits" class="">크레딧</a></nav>
+        </div>
+    </header>
 
-    <div class="policy-header">
-        <a class="policy-brand" href="/">
-            <img src="{{ url_for('static', filename='logo/logo.webp') }}" alt="루미너스 로고">
-            <span>루미너스</span>
-        </a>
-        <a class="back-home" href="/"><i class="fas fa-arrow-left"></i> 홈으로</a>
+    <div class="pc-hero">
+        <p class="pc-kicker"><i class="fas fa-shield-alt"></i> 개인정보처리방침</p>
+        <h1>내 정보는 이렇게 다뤄요</h1>
+        <p class="pc-lead">루미너스는 「개인정보 보호법」을 지키며, 꼭 필요한 정보만 모으고 광고에 쓰지 않아요. pastellive.co.kr과 모든 하위 도메인에 적용돼요.</p>
+        <div class="pc-meta"><span class="pc-chip">시행 2026년 7월 13일</span><span class="pc-chip">최근 개정 2026년 10월 1일</span></div>
+    </div>
+    <section class="pc-summary" aria-label="한눈에 보기"><div class="pc-card"><div class="ic"><i class="fas fa-user-check"></i></div><h3>필요한 것만</h3><p>로그인 없이도 대부분 쓸 수 있고, 회원도 아이디·닉네임 정도만 받아요.</p></div><div class="pc-card"><div class="ic"><i class="fas fa-ban"></i></div><h3>광고 · 판매 없음</h3><p>광고·추적 쿠키를 쓰지 않고, 정보를 팔거나 넘기지 않아요.</p></div><div class="pc-card"><div class="ic"><i class="fas fa-robot"></i></div><h3>루미는 서버 안에서</h3><p>루미 AI와 목소리는 외부 AI 회사가 아닌 루미너스 서버에서 돌아가요.</p></div><div class="pc-card"><div class="ic"><i class="fas fa-trash-can"></i></div><h3>언제든 삭제</h3><p>회원 탈퇴나 대화 초기화로 내 기록을 직접 지울 수 있어요.</p></div></section>
+    <div class="pc-layout">
+        <nav class="pc-toc" aria-label="목차"><p>목차</p><ol><li><a href="#collect">1 수집하는 개인정보</a></li><li><a href="#purpose">2 어디에 쓰나요</a></li><li><a href="#lumi">3 루미(AI)와 대화할 때</a></li><li><a href="#keep">4 얼마나 보관하나요</a></li><li><a href="#destroy">5 어떻게 파기하나요</a></li><li><a href="#third">6 다른 곳에 주나요</a></li><li><a href="#outsource">7 함께 쓰는 외부 서비스</a></li><li><a href="#rights">8 내 정보에 대한 권리</a></li><li><a href="#cookie">9 쿠키와 브라우저 저장소</a></li><li><a href="#safety">10 안전하게 지키는 방법</a></li><li><a href="#child">11 만 14세 미만</a></li><li><a href="#contact">12 문의와 책임자</a></li><li><a href="#change">13 방침이 바뀔 때</a></li></ol></nav>
+        <main class="pc-doc"><section class="pc-sec" id="collect"><h2><span class=no>1</span>수집하는 개인정보</h2><p>로그인하지 않아도 영상 보기, 검색 등 대부분의 기능을 쓸 수 있고, 이때는 계정 정보를 모으지 않아요. 회원으로 쓸 때 모으는 정보는 아래와 같아요.</p><div class="pc-table-wrap"><table class="pc-table"><thead><tr><th>구분</th><th>항목</th><th>언제</th></tr></thead><tbody><tr><td>필수</td><td>아이디, 비밀번호(복원할 수 없는 해시로만 저장), 닉네임</td><td>회원가입</td></tr><tr><td>선택</td><td>이메일 주소</td><td>비밀번호 찾기용으로 직접 등록할 때</td></tr><tr><td>선택</td><td>프로필 사진</td><td>직접 올릴 때</td></tr><tr><td>선택</td><td>디스코드 고유 식별자, 디스코드 사용자명</td><td>디스코드 계정을 연동할 때</td></tr><tr><td>이용 기록</td><td>댓글·커뮤니티 글·팬아트, 시청 기록, 북마크, 재생목록, 출석 기록, 참여 포인트, 문의 내용</td><td>기능을 쓸 때</td></tr><tr><td>루미 대화</td><td>루미에게 보낸 질문과 루미의 답변(로그인한 경우에만 저장), 질문에 첨부한 사진</td><td>루미와 대화할 때</td></tr><tr><td>자동 수집</td><td>접속 기록, IP 주소, 로그인 기록, 쿠키·세션, 브라우저·기기 정보</td><td>사이트에 접속할 때</td></tr></tbody></table></div>
+<div class="pc-note">구글 로그인은 2026년 8월 8일에 종료했고, 그날 구글 고유 식별자(Google ID)를 데이터베이스에서 완전히 지웠어요. 예전에 구글로 가입한 분의 이메일 주소는 계정 확인을 위해 보관하고 있어요.</div></section><section class="pc-sec" id="purpose"><h2><span class=no>2</span>어디에 쓰나요</h2><ul><li>회원 확인, 로그인 유지, 프로필 표시</li><li>댓글, 커뮤니티, 팬 갤러리, 시청 기록, 북마크, 재생목록, 출석·포인트 같은 개인화 기능</li><li>루미와의 대화 기록 보여 주기(로그인한 경우)</li><li>비밀번호 찾기 메일 보내기</li><li>스팸·매크로·신고 누적 같은 부정 이용 막기, 오류 확인 등 안정적인 운영</li><li>법령상 의무 이행과 분쟁 대응</li></ul></section><section class="pc-sec" id="lumi"><h2><span class=no>3</span>루미(AI)와 대화할 때</h2><ul><li>루미의 대답은 <strong>루미너스 서버 안에서 돌아가는 AI</strong>가 만들어요. 대화 내용을 외부 AI 회사로 보내지 않아요.</li><li>최신 정보가 필요한 질문은 답을 찾기 위해 <strong>질문 문장을 검색어로 DuckDuckGo에 검색</strong>할 수 있어요. 이때 계정 정보나 IP 주소는 함께 보내지 않아요.</li><li>사진을 첨부하면 서버 안에서 어떤 멤버인지 알아보는 데에만 써요.</li><li>루미 답변의 <strong>듣기(목소리)</strong>도 서버 안에서 만들어요. 만든 음성 파일에는 루미의 답변 내용만 담겨요.</li><li>저장된 대화는 루미 창의 초기화 버튼으로 언제든 지울 수 있어요. 비로그인 대화는 저장하지 않아요.</li></ul></section><section class="pc-sec" id="keep"><h2><span class=no>4</span>얼마나 보관하나요</h2><p>회원 탈퇴하면 바로 지워요. 다만 아래는 예외예요.</p><ul><li>법령(통신비밀보호법 등)에 보존 의무가 있는 기록: 법이 정한 기간 동안(예: 접속 기록 3개월)</li><li>부정 이용을 막기 위한 최소한의 기록: 이용 제한 조치일부터 최대 1년</li><li>탈퇴한 회원이 남긴 팬아트·글·댓글 같은 공개 콘텐츠: 닉네임·프로필 사진·작성 IP를 바로 지워 누구인지 알 수 없게 만든 뒤, 콘텐츠는 남거나 지워질 수 있어요. 좋아요·반응 같은 부가 기록은 함께 지워요.</li></ul></section><section class="pc-sec" id="destroy"><h2><span class=no>5</span>어떻게 파기하나요</h2><p>보관 기간이 끝나거나 목적을 이룬 정보는 바로 파기해요. 전자 파일은 되살릴 수 없게 지우고 데이터베이스에서도 완전히 없애요.</p></section><section class="pc-sec" id="third"><h2><span class=no>6</span>다른 곳에 주나요</h2><p>동의 없이 개인정보를 제3자에게 주지 않아요. 법령에 따라 수사기관 등이 적법하게 요구하거나, 이용자가 미리 분명하게 동의한 경우만 예외예요.</p></section><section class="pc-sec" id="outsource"><h2><span class=no>7</span>함께 쓰는 외부 서비스</h2><p>사이트를 운영하려고 아래 서비스를 이용해요. 이 과정에서 접속 정보 등이 해당 서비스를 거치거나 저장될 수 있어요. 각 서비스는 자체 개인정보처리방침에 따라 정보를 보호해요.</p><div class="pc-table-wrap"><table class="pc-table"><thead><tr><th>업체</th><th>쓰는 곳</th><th>거치는 정보</th></tr></thead><tbody><tr><td>Cloudflare, Inc. (미국)</td><td>트래픽 중계(CDN·터널), DDoS 방어</td><td>접속 IP, 요청 정보</td></tr><tr><td>Google LLC (미국)</td><td>YouTube 영상 정보(API), Google Drive 파일, 비밀번호 찾기 메일 발송(Gmail)</td><td>메일 받는 주소(비밀번호 찾기 때)</td></tr><tr><td>Discord Inc. (미국)</td><td>디스코드 계정 연동·로그인(OAuth)</td><td>디스코드 식별자·사용자명(연동한 경우)</td></tr><tr><td>Functional Software, Inc. (Sentry, 미국)</td><td>오류 모니터링</td><td>오류가 난 페이지 주소, 브라우저 정보, 접속 IP</td></tr><tr><td>DuckDuckGo, Inc. (미국)</td><td>루미의 웹 검색</td><td>검색어(질문 문장)만</td></tr></tbody></table></div><p>루미 AI, 루미 목소리, 사진 인식, 사이트 검색은 외부 서비스가 아니라 루미너스 서버 안에서 처리해요.</p></section><section class="pc-sec" id="rights"><h2><span class=no>8</span>내 정보에 대한 권리</h2><ul><li>설정에서 닉네임·프로필 사진·이메일을 직접 바꿀 수 있어요.</li><li>설정의 <strong>회원 탈퇴</strong>로 언제든 동의를 철회하고 계정과 개인정보를 지울 수 있어요.</li><li>내 정보 열람·정정·삭제·처리정지는 사이트 왼쪽 메뉴의 <strong>문의하기</strong>, 또는 <a href="https://discord.gg/swatakafam" target="_blank" rel="noopener">루미너스 디스코드</a>로 요청하면 바로 처리해요.</li></ul></section><section class="pc-sec" id="cookie"><h2><span class=no>9</span>쿠키와 브라우저 저장소</h2><p>로그인 유지를 위한 세션 쿠키와, 화면 설정·배경음 음량·루미 창 크기 같은 설정을 저장하는 브라우저 저장소(localStorage 등)를 써요. 브라우저에서 쿠키를 막거나 사이트 데이터를 지울 수 있지만, 그러면 로그인 등 일부 기능이 제한될 수 있어요. <strong>광고·추적용 쿠키는 쓰지 않아요.</strong></p></section><section class="pc-sec" id="safety"><h2><span class=no>10</span>안전하게 지키는 방법</h2><ul><li>모든 구간 HTTPS 암호화 통신</li><li>서버·데이터베이스 접근 통제와 내부망 분리(데이터베이스는 외부에서 접속할 수 없음)</li><li>비밀번호는 되돌릴 수 없는 해시로만 저장하고, 평문으로 저장·전송하지 않음</li><li>로그인 무차별 대입 방지, 요청 위조(CSRF) 검증, 업로드 파일 검사</li><li>정기 백업과 오류 모니터링</li></ul></section><section class="pc-sec" id="child"><h2><span class=no>11</span>만 14세 미만</h2><p>만 14세 미만은 회원으로 가입할 수 없어요. 만 14세 미만임이 확인된 계정은 바로 삭제해요.</p></section><section class="pc-sec" id="contact"><h2><span class=no>12</span>문의와 책임자</h2><p>개인정보 관련 문의, 열람·삭제 요청, 불만은 사이트 왼쪽 메뉴의 <strong>문의하기</strong>, 또는 <a href="https://discord.gg/swatakafam" target="_blank" rel="noopener">루미너스 디스코드</a>로 운영자에게 연락해 주세요. 받은 날부터 지체 없이 답하고 처리해요.</p></section><section class="pc-sec" id="change"><h2><span class=no>13</span>방침이 바뀔 때</h2><p>내용을 추가·삭제·수정하면 시행 7일 전부터 사이트에 알려요. 이용자에게 불리한 중요한 변경은 최소 30일 전에 알려요.</p></section></main>
     </div>
 
-    <div class="container">
-        <h1>개인정보처리방침</h1>
-        <p class="subtitle">루미너스(스텔라이브 팬 사이트, 도메인 pastellive.co.kr) · 시행일: 2026년 7월 13일 · 최종 개정일: 2026년 9월 9일</p>
-
-        <p>본 서비스('루미너스')는 「개인정보 보호법」 등 관련 법령을 준수하며, 이용자의 개인정보를 다음과 같이 처리합니다. 본 방침은 서비스 내 모든 페이지(pastellive.co.kr 및 하위 도메인)에 적용됩니다.</p>
-
-        <h2>1. 수집하는 개인정보 항목 및 수집 방법</h2>
-        <p>아이디/비밀번호 회원가입, 디스코드 계정 연동, 서비스 이용 과정에서 아래 정보를 수집합니다. 로그인하지 않아도 대부분의 기능(영상 시청, 검색 등)을 이용할 수 있으며, 이 경우 계정 정보는 수집되지 않습니다.</p>
-        <ul>
-            <li><strong>필수 항목(아이디/비밀번호 가입 시):</strong> 로그인용 아이디, 비밀번호(암호화된 해시 값으로만 저장 - 평문 비밀번호는 저장하지 않음), 닉네임</li>
-            <li><strong>선택 항목:</strong> 프로필 사진(직접 등록 시), 디스코드 계정 연동 시 디스코드 고유 식별자 및 디스코드 사용자명</li>
-            <li><strong>서비스 이용 과정에서 생성되는 정보:</strong> 댓글·게시물·팬아트 등 이용자가 작성한 콘텐츠, 시청 기록, 북마크, 재생목록, 검색어(통계용, 계정과 연결하지 않음)</li>
-            <li><strong>자동 수집 항목:</strong> 접속 로그, IP 주소, 쿠키·세션 정보, 브라우저 및 기기 정보</li>
-            <li><strong>과거 구글 로그인 계정 관련:</strong> 구글 로그인 기능은 2026년 8월 8일부로 완전히 종료되었으며, 로그인에 사용되던 구글 고유 식별자(Google ID)는 이날 데이터베이스에서 완전히 삭제되었습니다. 과거 구글 계정으로 가입했던 이용자의 이메일 주소는 계정 식별을 위해 계속 보관됩니다.</li>
-        </ul>
-
-        <h2>2. 개인정보의 수집 및 이용 목적</h2>
-        <ul>
-            <li>회원 식별, 로그인 상태 유지 및 프로필 표시</li>
-            <li>댓글, 커뮤니티 게시물, 팬 갤러리, 시청 기록, 북마크, 재생목록 등 개인화 기능 제공</li>
-            <li>내 댓글에 대한 답글·좋아요 등 사이트 내 알림(알림함) 제공</li>
-            <li>서비스 부정 이용(스팸, 매크로, 신고 누적 게시물 등) 방지 및 안정적 운영</li>
-            <li>법령상 의무 이행 및 분쟁 대응</li>
-        </ul>
-
-        <h2>3. 개인정보의 보유 및 이용 기간</h2>
-        <p>원칙적으로 회원 탈퇴 시 지체 없이 파기합니다. 다만 아래의 경우 예외로 합니다.</p>
-        <ul>
-            <li>관련 법령(통신비밀보호법 등)에 따라 보존 의무가 있는 항목: 해당 법령이 정한 기간(예: 접속 기록 3개월)</li>
-            <li>부정 이용 방지를 위해 필요한 최소한의 기록: 이용 제한 조치일로부터 최대 1년</li>
-            <li>탈퇴 회원이 작성한 팬아트·게시물·댓글 등 공개 콘텐츠: 탈퇴 처리 시 닉네임·프로필 사진·작성 시 기록된 IP 주소를 즉시 제거(비식별화)한 뒤 콘텐츠 자체는 유지되거나 삭제될 수 있습니다. 좋아요·반응 등 콘텐츠 자체가 아닌 부가 기록은 탈퇴 시 함께 삭제됩니다</li>
-        </ul>
-
-        <h2>4. 개인정보의 파기 절차 및 방법</h2>
-        <p>보유 기간이 경과하거나 처리 목적이 달성된 개인정보는 재생 불가능한 방법으로 지체 없이 파기합니다. 전자적 파일은 복구가 불가능한 방식으로 삭제하며, 데이터베이스에서 완전히 제거합니다.</p>
-
-        <h2>5. 개인정보의 제3자 제공</h2>
-        <p>이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 단, 다음의 경우는 예외로 합니다.</p>
-        <ul>
-            <li>법령에 근거한 수사기관 등의 적법한 요구가 있는 경우</li>
-            <li>이용자가 사전에 명시적으로 동의한 경우</li>
-        </ul>
-
-        <h2>6. 개인정보 처리의 위탁 및 국외 이전</h2>
-        <p>서비스 운영을 위해 아래 업체의 인프라를 이용하며, 이 과정에서 접속 정보 등이 해당 인프라를 경유·저장될 수 있습니다.</p>
-        <ul>
-            <li><strong>Google LLC(미국):</strong> 영상 데이터(YouTube API), 파일 저장(Google Drive)</li>
-            <li><strong>Discord Inc.(미국):</strong> 계정 연동/로그인(OAuth), 알림 봇 운영</li>
-            <li><strong>Cloudflare, Inc.(미국):</strong> 트래픽 중계(CDN·터널), 보안(DDoS 방어) — 접속 IP 등이 경유됩니다</li>
-            <li><strong>Oracle Corporation(일본 리전):</strong> 서버 호스팅(인프라 운영)</li>
-        </ul>
-        <p>각 업체는 자체 개인정보처리방침에 따라 정보를 보호하며, 서비스는 위탁 목적 달성에 필요한 최소한의 정보만 전달합니다.</p>
-
-        <h2>7. 이용자의 권리와 행사 방법</h2>
-        <ul>
-            <li>서비스 내 '프로필 변경'에서 닉네임·프로필 사진을 직접 수정할 수 있습니다.</li>
-            <li>'회원 탈퇴' 기능으로 언제든지 동의를 철회하고 계정과 개인정보 삭제를 요청할 수 있습니다. 탈퇴 시 개인정보는 본 방침 제3조에 따라 파기됩니다.</li>
-            <li>본인 데이터의 열람·정정·삭제·처리정지는 아래 문의 채널로 요청할 수 있으며, 지체 없이 조치합니다.</li>
-        </ul>
-
-        <h2>8. 쿠키 및 유사 기술의 운용</h2>
-        <p>로그인 상태 유지를 위한 세션 쿠키와, 시청 기록·화면 설정 등의 저장을 위한 브라우저 저장소(localStorage 등)를 사용합니다. 브라우저 설정에서 쿠키를 거부하거나 사이트 데이터를 삭제할 수 있으나, 이 경우 로그인 등 일부 기능 이용에 제약이 있을 수 있습니다. 본 서비스는 광고 목적의 추적 쿠키를 사용하지 않습니다.</p>
-
-        <h2>9. 개인정보의 안전성 확보 조치</h2>
-        <ul>
-            <li>전 구간 HTTPS 암호화 통신</li>
-            <li>개인정보가 저장된 서버·데이터베이스에 대한 접근 통제 및 사설망 격리</li>
-            <li>비밀번호는 복호화가 불가능한 해시(암호화) 형태로만 저장하며, 평문으로는 저장·전송하지 않음</li>
-            <li>정기 백업 및 오류 모니터링</li>
-        </ul>
-
-        <h2>10. 아동의 개인정보</h2>
-        <p>만 14세 미만 아동의 회원 가입은 받지 않는 것을 원칙으로 하며, 만 14세 미만임이 확인된 계정은 지체 없이 삭제 조치합니다.</p>
-
-        <h2>11. 개인정보 보호책임자 및 문의</h2>
-        <p>개인정보 관련 문의, 열람·삭제 요청, 불만 처리는 <a href="https://discord.gg/swatakafam" target="_blank" rel="noopener">루미너스 디스코드 채널</a>을 통해 운영자에게 연락해 주시기 바랍니다. 접수일로부터 지체 없이 답변·처리합니다.</p>
-
-        <h2>12. 방침의 변경</h2>
-        <p>본 방침의 내용이 추가·삭제·수정될 경우 시행 7일 전부터 사이트 공지를 통해 알립니다. 이용자에게 불리한 중대한 변경의 경우 최소 30일 전에 공지합니다.</p>
-    </div>
+    <footer class="pc-foot">
+        <div class="pc-foot-inner">
+            <span>루미너스 · 스텔라이브 비공식 팬 사이트</span>
+            <a href="/">홈</a><a href="/updates">업데이트 로그</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><a href="/credits">크레딧</a>
+            <a href="https://github.com/Valley658/luminous" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
+        </div>
+    </footer>
+    <script>
+    // 지금 읽고 있는 조항을 목차에 표시
+    (function () {
+        var links = Array.prototype.slice.call(document.querySelectorAll('.pc-toc a'));
+        if (!('IntersectionObserver' in window) || !links.length) return;
+        var map = {};
+        links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (!e.isIntersecting) return;
+                links.forEach(function (a) { a.classList.remove('on'); });
+                var a = map[e.target.id]; if (a) a.classList.add('on');
+            });
+        }, { rootMargin: '-30% 0px -60% 0px' });
+        document.querySelectorAll('.pc-sec').forEach(function (s) { io.observe(s); });
+    })();
+    </script>
 </body>
 </html>

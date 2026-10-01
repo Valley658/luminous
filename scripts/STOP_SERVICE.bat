@@ -30,11 +30,6 @@ powershell -NoProfile -Command ^
     "}"
 echo   Done.
 
-echo [2/5] Stopping PastelliveDiscordBot (Go - discord-bot.exe)...
-schtasks /end /tn "PastelliveDiscordBot" >nul 2>&1
-taskkill /f /im discord-bot.exe >nul 2>&1
-echo   Done.
-
 echo [3/5] Stopping nginx (and its 2-minute watchdog task, or it would just restart nginx)...
 schtasks /end /tn "NginxWatchdog" >nul 2>&1
 schtasks /end /tn "NginxStartup" >nul 2>&1

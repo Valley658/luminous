@@ -13,16 +13,6 @@ echo   [Error] Task "PastelliveApp" is not registered yet.
 echo   Run deploy\windows\install_all.bat 14 once to set it up (Go cutover).
 :app_done
 
-echo [2/6] Starting PastelliveDiscordBot...
-schtasks /query /tn "PastelliveDiscordBot" >nul 2>&1
-if errorlevel 1 goto bot_missing
-schtasks /run /tn "PastelliveDiscordBot"
-goto bot_done
-:bot_missing
-echo   [Error] Task "PastelliveDiscordBot" is not registered yet.
-echo   Run deploy\windows\install_all.bat once to set it up.
-:bot_done
-
 echo [3/6] Starting nginx...
 schtasks /query /tn "NginxStartup" >nul 2>&1
 if errorlevel 1 goto nginx_missing
@@ -68,7 +58,6 @@ echo   via deploy\windows\_install_java_image_service.bat if rolling back.)
 
 echo Started (a few seconds needed to come up). Check logs:
 echo   logs\service.log
-echo   logs\discord_bot.log
 echo   C:\nginx\logs\error.log
 echo   C:\meilisearch\logs\meilisearch.log
 echo   services\c-image-service\logs\service.log

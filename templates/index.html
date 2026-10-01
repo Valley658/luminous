@@ -180,20 +180,61 @@
         }
         .fan-notice-link:hover { background:var(--accent); color:var(--accent-contrast); }
         .fan-notice-modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.75); z-index: 20150; align-items: center; justify-content: center;
+            display: none; position: fixed; inset: 0; z-index: 20150; align-items: center; justify-content: center;
+            background: rgba(4, 8, 16, 0.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 16px;
         }
         .fan-notice-modal-overlay.open { display: flex; }
         .fan-notice-modal-box {
-            background:var(--bg-surface-alt); border:1px solid var(--accent); border-radius: 14px; padding: 28px;
-            width: 90%; max-width: 420px; color:var(--text-primary); box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            position: relative; width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow-y: auto;
+            background: var(--bg-surface-alt); color: var(--text-primary); border-radius: 22px;
+            border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+            box-shadow: 0 24px 70px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03) inset;
+            animation: fnmIn .32s cubic-bezier(.2,.9,.3,1.2);
         }
-        .fan-notice-modal-box h3 { margin: 0 0 14px; font-size: 18px; color:var(--accent); }
-        .fan-notice-modal-box p { margin: 0 0 12px; font-size: 14px; line-height: 1.6; color:var(--text-secondary); }
+        @keyframes fnmIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .fan-notice-modal-box { animation: none; } }
+        .fnm-hero {
+            position: relative; padding: 30px 24px 22px; text-align: center; overflow: hidden; border-radius: 22px 22px 0 0;
+            background:
+                radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 34%, transparent) 0%, transparent 70%),
+                radial-gradient(60% 60% at 85% 20%, rgba(167,139,250,.22) 0%, transparent 70%);
+        }
+        .fnm-hero::after {
+            content: ""; position: absolute; left: 24px; right: 24px; bottom: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+        }
+        .fnm-logo {
+            width: 66px; height: 66px; border-radius: 50%; display: block; margin: 0 auto 12px;
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 34px color-mix(in srgb, var(--accent) 55%, transparent);
+        }
+        .fnm-title { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -.4px; color: var(--text-primary); }
+        .fnm-title span { color: var(--accent); }
+        .fnm-meaning { margin: 6px 0 0; font-size: 13px; color: var(--text-muted); }
+        .fnm-meaning b { color: var(--text-primary); font-weight: 700; }
+        .fnm-body { padding: 18px 22px 6px; display: flex; flex-direction: column; gap: 10px; }
+        .fnm-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--text-primary) 4%, transparent); }
+        .fnm-icon {
+            flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 15px;
+            color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent);
+        }
+        .fnm-item h4 { margin: 0 0 3px; font-size: 14px; font-weight: 800; color: var(--text-primary); }
+        .fnm-item p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+        .fnm-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 14px 22px 4px; }
+        .fnm-links a {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; text-decoration: none;
+            color: var(--text-secondary); border: 1px solid var(--border);
+        }
+        .fnm-links a:hover { color: var(--accent); border-color: var(--accent); }
         .fan-notice-modal-close {
-            margin-top: 6px; width: 100%; background:var(--accent); color:var(--accent-contrast); border: none;
-            padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;
+            display: block; width: calc(100% - 44px); margin: 14px 22px 22px; padding: 12px; border: none; border-radius: 12px;
+            background: var(--accent); color: var(--accent-contrast); font-weight: 800; font-size: 14px; cursor: pointer;
         }
+        .fan-notice-modal-close:hover { filter: brightness(1.08); }
+        .fnm-x {
+            position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; z-index: 2;
+            background: rgba(255,255,255,.06); color: var(--text-muted); font-size: 14px;
+        }
+        .fnm-x:hover { background: rgba(255,255,255,.12); color: var(--text-primary); }
 
         .quiz-modal-close { margin-top: 18px; width: 100%; background:var(--border); color:var(--text-primary); border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
@@ -504,6 +545,7 @@
             background-color:var(--border-soft2); color:var(--text-primary); border: none; border-radius: 50%; font-size: 15px; cursor: pointer;
         }
         .pl-updates-btn:hover { background-color:var(--border-strong3); }
+        a.pl-github-btn { text-decoration: none; font-size: 18px; }
         .pl-notif-badge {
             position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; background: #f43f5e; color: #fff;
             font-size: 10px; font-weight: bold; border-radius: 999px; display: flex; align-items: center; justify-content: center; line-height: 1;
@@ -806,7 +848,7 @@
 
     <div class="pl-fixed-top" id="ytFixedTop">
         <div class="fan-notice-bar">
-            <span id="fanNoticeText">본 사이트는 스텔라이브 공식이 아닌 <b>팬 사이트</b>입니다(사이트 운영진은 개인주의입니다. 이상한 기능이 추가될 수 있음을 알고 계세요)</span>
+            <span id="fanNoticeText">스텔라이브 공식 사이트가 아닌 <b>팬 사이트</b>입니다</span>
             <button class="fan-notice-link" onclick="document.getElementById('fanNoticeModal').classList.add('open')">루미너스란?</button>
         </div>
         <script>(function() {
@@ -868,19 +910,7 @@
             <div class="pl-header-actions" id="headerActions">
 
 
-                <div class="pl-notif-wrap" id="notifWrap" style="display:none;">
-                    <button class="pl-notif-btn" id="notifBellBtn" title="알림" aria-label="알림">
-                        <i class="fas fa-bell"></i>
-                        <span class="pl-notif-badge" id="notifBadge" style="display:none;">0</span>
-                    </button>
-                    <div class="pl-notif-dropdown" id="notifDropdown">
-                        <div class="pl-notif-dropdown-header">
-                            <span>알림</span>
-                            <button id="notifMarkAllBtn">모두 읽음</button>
-                        </div>
-                        <div class="pl-notif-list" id="notifList"></div>
-                    </div>
-                </div>
+                <!-- [2026-10-01] 알림 벨 제거 (작동하지 않아서). 되살리려면 git 기록 참고 -->
                 <div class="pl-create-wrap">
                     <button class="pl-create-btn" id="createBtn" onclick="event.stopPropagation(); toggleCreateMenu();"><i class="fas fa-plus"></i><span>만들기</span></button>
                     <div class="pl-create-dropdown" id="createDropdown">
@@ -889,6 +919,7 @@
                     </div>
                 </div>
                 <button class="pl-updates-btn" onclick="location.href='/updates'" title="업데이트로그" aria-label="업데이트로그"><i class="fas fa-bullhorn"></i></button>
+                <a class="pl-updates-btn pl-github-btn" href="https://github.com/Valley658/luminous" target="_blank" rel="noopener" title="루미너스는 오픈소스예요 - GitHub에서 코드 보기" aria-label="루미너스 GitHub 저장소 (오픈소스)"><i class="fab fa-github"></i></a>
             </div>
 
             <div class="pl-header-right" id="headerRight"></div>
@@ -896,12 +927,43 @@
     </div>
 
     <div class="fan-notice-modal-overlay" id="fanNoticeModal" onclick="if(event.target===this) this.classList.remove('open')">
-        <div class="fan-notice-modal-box">
-            <h3>'루미너스(Luminous)'란?</h3>
-            <p>파스텔라이브는 스텔라이브(StelLive) 소속사의 공식 사이트가 아닌, 팬이 자율적으로 운영하는 비공식 2차 창작 팬 사이트입니다.</p>
-            <p>'루미너스(Luminous)'는 '은은하게 빛나는'이라는 뜻으로, 스텔라이브 멤버들을 향한 팬심을 조용히 빛내며 응원한다는 의미를 담은 팬덤 애칭입니다. 소속사와는 무관한 이름입니다.</p>
-            <p>본 사이트는 스텔라이브 2차 창작 가이드라인을 준수하며 비영리로 운영됩니다.</p>
-            <button class="fan-notice-modal-close" onclick="document.getElementById('fanNoticeModal').classList.remove('open')">닫기</button>
+        <div class="fan-notice-modal-box" role="dialog" aria-modal="true" aria-labelledby="fnmTitle">
+            <button type="button" class="fnm-x" aria-label="닫기" onclick="document.getElementById('fanNoticeModal').classList.remove('open')"><i class="fas fa-xmark"></i></button>
+            <div class="fnm-hero">
+                <img class="fnm-logo" src="{{ url_for('static', filename='logo/logo.webp') }}" alt="">
+                <h3 class="fnm-title" id="fnmTitle">루미너스 <span>Luminous</span></h3>
+                <p class="fnm-meaning"><b>은은하게 빛나는</b> · 스텔라이브 팬 사이트</p>
+            </div>
+            <div class="fnm-body">
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fas fa-heart"></i></div>
+                    <div><h4>팬이 만든 비공식 사이트예요</h4>
+                    <p>스텔라이브(StelLive) 소속사의 공식 사이트가 아니라, 팬이 자율적으로 운영하는 2차 창작 팬 사이트예요.</p></div>
+                </div>
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fas fa-star"></i></div>
+                    <div><h4>이름에 담긴 뜻</h4>
+                    <p>'루미너스'는 '은은하게 빛나는'이라는 뜻이에요. 멤버들을 향한 팬심을 조용히 빛내며 응원한다는 의미의 팬덤 애칭으로, 소속사와는 관계없는 이름이에요.</p></div>
+                </div>
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div><h4>비영리 · 가이드라인 준수</h4>
+                    <p>스텔라이브 2차 창작 가이드라인을 지키며, 광고나 후원 없이 비영리로 운영해요.</p></div>
+                </div>
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fab fa-github"></i></div>
+                    <div><h4>오픈소스예요</h4>
+                    <p>사이트 코드는 GitHub에 공개돼 있어요. 누구나 보고 의견을 낼 수 있어요.</p></div>
+                </div>
+            </div>
+            <div class="fnm-links">
+                <a href="https://github.com/Valley658/luminous" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
+                <a href="/updates"><i class="fas fa-bullhorn"></i> 업데이트 로그</a>
+                <a href="/credits"><i class="fas fa-images"></i> 크레딧</a>
+                <a href="/terms"><i class="fas fa-file-lines"></i> 이용약관</a>
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> 개인정보처리방침</a>
+            </div>
+            <button class="fan-notice-modal-close" onclick="document.getElementById('fanNoticeModal').classList.remove('open')">확인했어요</button>
         </div>
     </div>
 
@@ -1423,6 +1485,7 @@ document.getElementById("scheduleEntryDeleteBtn").addEventListener("click", asyn
                         <button type="button" class="sidebar-bottom-link" style="color:var(--text-muted); font-size: 13px;" onclick="window.openInquiryModal && window.openInquiryModal()"><i class="fas fa-comment-dots"></i><span>문의하기</span></button>
                         <a href="https://pastellive.co.kr/privacy" class="sidebar-bottom-link" style="color:var(--text-muted); font-size: 13px;"><i class="fas fa-user-shield"></i><span>개인정보처리방침</span></a>
                         <a href="https://pastellive.co.kr/terms" class="sidebar-bottom-link" style="color:var(--text-muted); font-size: 13px;"><i class="fas fa-file-signature"></i><span>이용약관</span></a>
+                        <a href="https://pastellive.co.kr/credits" class="sidebar-bottom-link" style="color:var(--text-muted); font-size: 13px;"><i class="fas fa-images"></i><span>크레딧</span></a>
                     </div>
                 </div>
             </div>
@@ -1920,6 +1983,24 @@ function smoothScrollTrackBy(el, distance, duration) {
         }
         .lumi-copy-btn:hover { opacity: 1; background: var(--bg-elevated); color: var(--accent, #38bdf8); }
         .lumi-copy-btn.lumi-copy-done { color: #22c55e; opacity: 1; }
+        /* 루미 답변 듣기 버튼 (VoiceStudio 루미 목소리) */
+        .lumi-voice-btn {
+            width: 22px; height: 22px; border-radius: 50%; border: none; cursor: pointer;
+            background: transparent; color: var(--text-muted); flex: 0 0 auto;
+            display: flex; align-items: center; justify-content: center; font-size: 11px;
+            opacity: .55; transition: opacity .15s, background .15s, color .15s;
+        }
+        .lumi-voice-btn:hover { opacity: 1; background: var(--bg-elevated); color: var(--accent, #38bdf8); }
+        .lumi-voice-btn.lumi-voice-playing { opacity: 1; color: #fff; background: var(--accent, #38bdf8); }
+        .lumi-voice-btn:disabled { cursor: progress; opacity: .8; }
+        /* 루미 채팅 스티커 (이미지: pngimg.com, CC BY-NC 4.0 - /credits) */
+        .lumi-sticker {
+            width: 58px; height: 58px; object-fit: contain; margin: 2px 0 0 6px;
+            filter: drop-shadow(0 3px 5px rgba(0,0,0,.25));
+            animation: lumiStickerPop .45s cubic-bezier(.175,.885,.32,1.275);
+        }
+        @keyframes lumiStickerPop { from { transform: scale(.3) rotate(-15deg); opacity: 0; } to { transform: none; opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) { .lumi-sticker { animation: none; } }
         #lumiChatNotice #lumiChatNoticeResetLink {
             border: none; background: none; padding: 0; font: inherit; font-size: 11px;
             color: var(--accent, #38bdf8); font-weight: 700; text-decoration: underline; cursor: pointer;
@@ -2192,7 +2273,6 @@ function smoothScrollTrackBy(el, distance, duration) {
     </script>
 
     <script src="{{ versioned_static('js/script.js') }}" defer></script>
-    <script src="{{ versioned_static('js/notifications.js') }}" defer></script>
     <script src="{{ versioned_static('js/imagepreview.js') }}" defer></script>
     <script>if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
@@ -2535,7 +2615,7 @@ function executeFastSearch() {
     fetch(`/api/search?q=${encodeURIComponent(query)}`).then(res => res.json()).then(data => {
         if (grid.dataset.mode !== "search") return;
         if (!data.success) {
-            grid.innerHTML = '<div style="color:var(--text-muted); padding:50px; text-align:center; font-size:18px;"><i class="fas fa-exclamation-circle"></i> 검색 결과가 없습니다.</div>';
+            grid.innerHTML = '<div style="color:var(--text-muted); padding:50px; text-align:center; font-size:18px;"><img src="/static/images/pngimg/loupe.webp" alt="" style="display:block; width:84px; height:auto; margin:0 auto 14px; opacity:.9;">검색 결과가 없습니다.</div>';
             return;
         }
         const videos = data.videos || [];
@@ -2543,7 +2623,7 @@ function executeFastSearch() {
         const community = data.community || [];
         const channels = data.channels || [];
         if (videos.length === 0 && fanarts.length === 0 && community.length === 0 && channels.length === 0) {
-            grid.innerHTML = '<div style="color:var(--text-muted); padding:50px; text-align:center; font-size:18px;"><i class="fas fa-exclamation-circle"></i> 검색 결과가 없습니다.</div>';
+            grid.innerHTML = '<div style="color:var(--text-muted); padding:50px; text-align:center; font-size:18px;"><img src="/static/images/pngimg/loupe.webp" alt="" style="display:block; width:84px; height:auto; margin:0 auto 14px; opacity:.9;">검색 결과가 없습니다.</div>';
             return;
         }
         let extraHtml = "";
@@ -4252,6 +4332,102 @@ function lumiAddCopyButton(row, getText) {
     row.appendChild(btn);
 }
 
+// [루미 목소리] 루미 답변 옆 스피커 버튼 - 누르면 루미 목소리(VoiceStudio)로 읽어 준다.
+// 서버(/api/lumi/voice)가 이미 만든 음성이면 바로, 처음 읽는 답변이면 만들어서
+// 주소를 돌려준다. 서버에 목소리가 설정돼 있지 않으면 버튼 자체를 안 붙인다.
+// 자동 재생은 하지 않는다(방문자가 원할 때만).
+const lumiVoiceReady = fetch("/api/lumi/voice/status")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => !!(d && d.enabled))
+    .catch(() => false);
+let lumiVoiceAudio = null;
+let lumiVoiceActiveBtn = null;
+function lumiVoiceStop() {
+    if (lumiVoiceAudio) { lumiVoiceAudio.pause(); lumiVoiceAudio = null; }
+    if (lumiVoiceActiveBtn) {
+        lumiVoiceActiveBtn.classList.remove("lumi-voice-playing");
+        lumiVoiceActiveBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        lumiVoiceActiveBtn.title = "루미 목소리로 듣기";
+        lumiVoiceActiveBtn = null;
+    }
+}
+function lumiAddVoiceButton(row, text) {
+    if (!row || !text) return;
+    lumiVoiceReady.then((enabled) => {
+        if (!enabled || row.querySelector(".lumi-voice-btn")) return;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "lumi-voice-btn";
+        btn.title = "루미 목소리로 듣기";
+        btn.setAttribute("aria-label", "루미 답변 목소리로 듣기");
+        btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        btn.addEventListener("click", async () => {
+            if (lumiVoiceActiveBtn === btn) { lumiVoiceStop(); return; }
+            lumiVoiceStop();
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.title = "루미가 목 푸는 중...";
+            try {
+                const res = await fetch("/api/lumi/voice", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text }),
+                });
+                let data = null;
+                try { data = await res.json(); } catch (e) {}
+                if (!res.ok || !data || !data.url) {
+                    throw new Error((data && data.message) || "지금은 목소리가 안 나와...");
+                }
+                const audio = new Audio(data.url);
+                lumiVoiceAudio = audio;
+                lumiVoiceActiveBtn = btn;
+                btn.classList.add("lumi-voice-playing");
+                btn.innerHTML = '<i class="fas fa-stop"></i>';
+                btn.title = "그만 듣기";
+                audio.addEventListener("ended", () => { if (lumiVoiceAudio === audio) lumiVoiceStop(); });
+                audio.addEventListener("error", () => { if (lumiVoiceAudio === audio) lumiVoiceStop(); });
+                await audio.play();
+            } catch (e) {
+                lumiVoiceStop();
+                btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                btn.title = "루미 목소리로 듣기";
+                if (typeof showToast === "function") showToast(e.message || "지금은 목소리가 안 나와...", "error");
+            } finally {
+                btn.disabled = false;
+            }
+        });
+        // 복사 버튼보다 앞(말풍선 바로 옆)에 둔다.
+        const copy = row.querySelector(".lumi-copy-btn");
+        row.insertBefore(btn, copy || null);
+    });
+}
+window.lumiAddVoiceButton = lumiAddVoiceButton;
+
+// [루미 채팅 스티커] 질문(없으면 답변)에 특정 주제가 나오면 답변 아래에 작은 소품 그림을
+// 하나 붙인다. 위에서부터 먼저 맞는 하나만 쓴다. 그림 출처는 /credits 페이지에 모아 둠.
+const LUMI_STICKERS = [
+    { re: /생일|생축|케이크/, img: "cake", alt: "생일 케이크" },
+    { re: /축하|데뷔|합격|1등|우승/, img: "party_popper", alt: "폭죽" },
+    { re: /기념일|주년|100일|천일|기념/, img: "balloon", alt: "풍선" },
+    { re: /날씨|비가|비 와|비와|비 온|우산|장마|소나기/, img: "umbrella", alt: "우산" },
+    { re: /노래|음악|커버곡|불러|가사|플레이리스트|노래방|음원/, img: "headphones", alt: "헤드폰" },
+    { re: /게임|겜|롤|배그|마크|마인크래프트|발로란트/, img: "gamepad", alt: "게임패드" },
+    { re: /라이브|방송|생방|스케줄|합방/, img: "microphone", alt: "마이크" },
+];
+function lumiAddSticker(msgEl, question, reply) {
+    if (!msgEl || msgEl.querySelector(".lumi-sticker")) return;
+    const q = question || "";
+    const hit = LUMI_STICKERS.find((s) => s.re.test(q)) || (q ? null : LUMI_STICKERS.find((s) => s.re.test(reply || "")));
+    if (!hit) return;
+    const img = document.createElement("img");
+    img.className = "lumi-sticker";
+    img.src = "/static/images/pngimg/" + hit.img + ".webp";
+    img.alt = hit.alt;
+    img.loading = "lazy";
+    const row = msgEl.querySelector(".lumi-msg-row");
+    msgEl.insertBefore(img, row ? row.nextSibling : null);
+}
+
 // 루미 칸의 "멤버 선택해서 라이브 보러가기" - 방문자가 직접 물어보지 않아도
 // 버튼 하나로 원하는 멤버의 라이브 시청 화면(왼쪽 사이드바에서 그 멤버를
 // 클릭했을 때와 완전히 같은 화면)으로 바로 이동시켜준다. 이 사이트는 멤버별
@@ -4500,6 +4676,8 @@ async function lumiAskAI(question, imageFile, imageURL, skipUserBubble) {
             thinking.bubble.appendChild(replyWrap);
             thinking.msg.classList.remove("lumi-msg-thinking");
             lumiAddCopyButton(thinking.row, () => reply);
+            lumiAddVoiceButton(thinking.row, reply);
+            lumiAddSticker(thinking.msg, question, reply);
             renderLumiQuickReplies(thinking.msg, question);
             const list = document.getElementById("lumiChatMessages");
             if (list) list.scrollTop = list.scrollHeight;
@@ -4539,7 +4717,10 @@ async function lumiLoadHistory() {
         const messages = (data && data.messages) || [];
         messages.forEach((m) => {
             if (m.question) lumiAppendMessage("user", m.question);
-            if (m.reply) lumiAppendMessage("ai", m.reply);
+            if (m.reply) {
+                const item = lumiAppendMessage("ai", m.reply);
+                if (item) lumiAddVoiceButton(item.row, m.reply);
+            }
         });
     } catch (e) {
         // 기록을 못 불러와도 채팅 자체는 정상 동작해야 하니 조용히 무시한다.
@@ -4662,7 +4843,9 @@ async function resetLumiConversation() {
     try {
         await fetch("/api/lumi/history", { method: "DELETE" });
     } catch (e) {}
-    lumiAppendMessage("ai", lumiRandomFrom(LUMI_RESET_LINES));
+    const resetLine = lumiRandomFrom(LUMI_RESET_LINES);
+    const resetItem = lumiAppendMessage("ai", resetLine);
+    if (resetItem) lumiAddVoiceButton(resetItem.row, resetLine);
 }
 window.resetLumiConversation = resetLumiConversation;
 
@@ -4988,9 +5171,53 @@ document.addEventListener("DOMContentLoaded", initLumiChat);
             currentTrackMember = null;
             return;
         }
-        if (name === currentTrackMember) return;
+        pausedForLive = false;
+        if (name === currentTrackMember) {
+            // 같은 멤버를 다시 눌렀을 때(라이브 탭에서 동영상 목록으로 돌아오는 경우 등) 다시 재생
+            if (audio.paused && audio.src) audio.play().catch(function () {});
+            return;
+        }
         loadTrack(name);
     });
+
+    // [2026-10-01] 라이브 탭에서는 방송 소리와 겹치지 않게 배경음을 일시정지하고,
+    // 동영상/Shorts/노래/다시보기/커뮤니티로 돌아오면 다시 재생한다.
+    // (script.js의 switchTab / showCommunity 를 감싸서 처리 - 루미의 "라이브 보러가기"처럼
+    //  코드로 탭을 바꾸는 경우도 같이 잡힌다)
+    var pausedForLive = false;
+    function onTabChanged(tab) {
+        if (!currentTrackMember || !audio.src) return;
+        if (tab === "live") {
+            if (!audio.paused) { audio.pause(); pausedForLive = true; }
+        } else if (pausedForLive) {
+            pausedForLive = false;
+            audio.play().catch(function () {});
+        }
+    }
+    function wrapTabFunctions() {
+        if (typeof window.switchTab === "function" && !window.switchTab.__bgmWrapped) {
+            var origSwitch = window.switchTab;
+            window.switchTab = function (tab) {
+                var r = origSwitch.apply(this, arguments);
+                onTabChanged(tab);
+                return r;
+            };
+            window.switchTab.__bgmWrapped = true;
+        }
+        if (typeof window.showCommunity === "function" && !window.showCommunity.__bgmWrapped) {
+            var origCommunity = window.showCommunity;
+            window.showCommunity = function () {
+                var r = origCommunity.apply(this, arguments);
+                onTabChanged("community");
+                return r;
+            };
+            window.showCommunity.__bgmWrapped = true;
+        }
+    }
+    // 탭 버튼들은 script.js가 "() => switchTab(...)" 로 연결해서 전역 이름을 그때그때 찾으므로
+    // 감싼 함수가 그대로 쓰인다. script.js는 defer라 로드가 끝난 뒤에 감싼다.
+    window.addEventListener("load", wrapTabFunctions);
+    document.addEventListener("DOMContentLoaded", wrapTabFunctions);
 })();
 </script>
 

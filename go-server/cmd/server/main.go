@@ -324,6 +324,7 @@ func main() {
 		go video.ResubscribeAllChannels(context.Background(), database, cfg.WebSubCallbackBase, cfg.WebSubSecret)
 	}
 	app.StartBackgroundScheduler()
+	app.StartLumiVoiceWarmup() // 루미 고정 멘트 미리 녹음 (VOICESTUDIO_VOICE 설정 시에만 동작)
 
 	r.Get("/admin/stats", app.AdminStatsPageHandler)
 	r.Get("/api/admin/stats", app.ApiAdminStatsHandler)
@@ -362,6 +363,8 @@ func main() {
 	r.Post("/api/lumi/ask", app.ApiLumiAskHandler)
 	r.Get("/api/lumi/history", app.ApiLumiHistoryHandler)
 	r.Delete("/api/lumi/history", app.ApiLumiHistoryDeleteHandler)
+	r.Get("/api/lumi/voice/status", app.ApiLumiVoiceStatusHandler)
+	r.Post("/api/lumi/voice", app.ApiLumiVoiceHandler)
 
 	r.Get("/share/{contentType}/{contentID}", app.SharePageHandler)
 	r.Get("/sw.js", app.ServiceWorkerHandler)
@@ -370,6 +373,8 @@ func main() {
 	r.Get("/favicon.ico", app.FaviconHandler)
 	r.Get("/privacy", app.PrivacyPolicyHandler)
 	r.Get("/terms", app.TermsOfServiceHandler)
+	r.Get("/credits", app.CreditsPageHandler)
+	r.NotFound(app.NotFoundHandler) // 없는 주소 → 길 잃은 문어 404 페이지 (credits.go)
 	r.Get("/api/live_status", app.ApiLiveStatusHandler)
 
 	r.Get("/watch/{videoID}", app.WatchVideoHandler)

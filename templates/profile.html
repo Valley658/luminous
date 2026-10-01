@@ -142,6 +142,10 @@
         .attendance-cell.today { border:1px solid var(--accent); }
         .attendance-cell.attended { background: linear-gradient(135deg, #0ea5e9, #38bdf8); color:#fff; }
         .attendance-cell.attended i { font-size: 10px; }
+        .attendance-cell .att-coin { width: 16px; height: auto; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+        .badge-icon-box .badge-pic { width: 46px; height: 46px; object-fit: contain; display: block; margin: 0 auto 14px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.3)); }
+        .empty-message::before { content: ""; display: block; width: 80px; height: 56px; margin: 0 auto 12px;
+            background: url("/static/images/pngimg/loupe.webp") center / contain no-repeat; opacity: .9; }
         .attendance-day { font-weight: bold; }
     </style>
 </head>
@@ -320,7 +324,7 @@ function loadAttendanceCalendar(year, month) {
             const isToday = isCurrentMonth && today.getDate() === day;
             cells += `<div class="attendance-cell${isAttended ? " attended" : ""}${isToday ? " today" : ""}">
                 <span class="attendance-day">${day}</span>
-                ${isAttended ? '<i class="fas fa-star"></i>' : ""}
+                ${isAttended ? '<img class="att-coin" src="/static/images/pngimg/coin.webp" alt="출석">' : ""}
             </div>`;
         }
         area.innerHTML = `
@@ -427,9 +431,9 @@ function switchProfileTab(tabName, btnElement) {
     } else if (tabName === "badges") {
         title.innerText = "뱃지";
         if (consecutiveDays >= 60) {
-            area.innerHTML = `\n                        <div class="badge-grid">\n                            <div class="badge-card">\n                                <div class="badge-icon-box">\n                                    <i class="fas fa-seedling" style="color:var(--text-primary); font-size:30px;"></i>\n                                    <div class="badge-number">60</div>\n                                </div>\n                                <div class="badge-text">60일 연속 출석<br>체크</div>\n                            </div>\n                        </div>\n                    `;
+            area.innerHTML = `\n                        <div class="badge-grid">\n                            <div class="badge-card">\n                                <div class="badge-icon-box">\n                                    <img class="badge-pic" src="/static/images/pngimg/trophy.webp" alt="">\n                                    <div class="badge-number">60</div>\n                                </div>\n                                <div class="badge-text">60일 연속 출석<br>체크</div>\n                            </div>\n                        </div>\n                    `;
         } else if (consecutiveDays > 0) {
-            area.innerHTML = `\n                        <div class="badge-grid">\n                            <div class="badge-card">\n                                <div class="badge-icon-box" style="background:linear-gradient(135deg, #10b981, #059669);">\n                                    <i class="fas fa-check" style="color:var(--text-primary); font-size:30px;"></i>\n                                    <div class="badge-number">${consecutiveDays}</div>\n                                </div>\n                                <div class="badge-text">${consecutiveDays}일 연속 출석<br>진행 중!</div>\n                            </div>\n                        </div>\n                    `;
+            area.innerHTML = `\n                        <div class="badge-grid">\n                            <div class="badge-card">\n                                <div class="badge-icon-box" style="background:linear-gradient(135deg, #10b981, #059669);">\n                                    <img class="badge-pic" src="/static/images/pngimg/medal.webp" alt="">\n                                    <div class="badge-number">${consecutiveDays}</div>\n                                </div>\n                                <div class="badge-text">${consecutiveDays}일 연속 출석<br>진행 중!</div>\n                            </div>\n                        </div>\n                    `;
         } else {
             area.innerHTML = '<div class="empty-message">아직 획득한 뱃지가 없습니다.</div>';
         }

@@ -742,6 +742,10 @@ func lumiCreatorDeflectReply(lines []string) map[string]any {
 // 저장 대상에 포함시킨다. 비로그인(userID == 0)은 SaveLumiChatMessage
 // 내부에서 이미 걸러지지만, DB 쿼리 자체를 아끼기 위해 여기서도 먼저 체크한다.
 func (a *App) sendLumiReply(w http.ResponseWriter, userID int64, prompt string, payload map[string]any) {
+	// 루미 목소리(듣기 버튼)는 루미가 실제로 한 말만 읽어 주므로 여기서 기록해 둔다(lumi_voice.go).
+	if reply, ok := payload["reply"].(string); ok && reply != "" {
+		rememberLumiVoiceText(reply)
+	}
 	if userID != 0 {
 		if reply, ok := payload["reply"].(string); ok && reply != "" {
 			if err := models.SaveLumiChatMessage(a.LumiDB, userID, prompt, reply); err != nil {

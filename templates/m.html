@@ -57,20 +57,61 @@
             padding: 1px 6px; border-radius: 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
         }
         .fan-notice-modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.75); z-index: 20150; align-items: center; justify-content: center;
+            display: none; position: fixed; inset: 0; z-index: 20150; align-items: center; justify-content: center;
+            background: rgba(4, 8, 16, 0.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 16px;
         }
         .fan-notice-modal-overlay.open { display: flex; }
         .fan-notice-modal-box {
-            background:var(--bg-surface-alt); border:1px solid var(--accent); border-radius: 14px; padding: 24px;
-            width: 88%; max-width: 380px; color:var(--text-primary); box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            position: relative; width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow-y: auto;
+            background: var(--bg-surface-alt); color: var(--text-primary); border-radius: 22px;
+            border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+            box-shadow: 0 24px 70px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03) inset;
+            animation: fnmIn .32s cubic-bezier(.2,.9,.3,1.2);
         }
-        .fan-notice-modal-box h3 { margin: 0 0 12px; font-size: 17px; color:var(--accent); }
-        .fan-notice-modal-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; color:var(--text-secondary); }
+        @keyframes fnmIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .fan-notice-modal-box { animation: none; } }
+        .fnm-hero {
+            position: relative; padding: 30px 24px 22px; text-align: center; overflow: hidden; border-radius: 22px 22px 0 0;
+            background:
+                radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 34%, transparent) 0%, transparent 70%),
+                radial-gradient(60% 60% at 85% 20%, rgba(167,139,250,.22) 0%, transparent 70%);
+        }
+        .fnm-hero::after {
+            content: ""; position: absolute; left: 24px; right: 24px; bottom: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+        }
+        .fnm-logo {
+            width: 66px; height: 66px; border-radius: 50%; display: block; margin: 0 auto 12px;
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 34px color-mix(in srgb, var(--accent) 55%, transparent);
+        }
+        .fnm-title { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -.4px; color: var(--text-primary); }
+        .fnm-title span { color: var(--accent); }
+        .fnm-meaning { margin: 6px 0 0; font-size: 13px; color: var(--text-muted); }
+        .fnm-meaning b { color: var(--text-primary); font-weight: 700; }
+        .fnm-body { padding: 18px 22px 6px; display: flex; flex-direction: column; gap: 10px; }
+        .fnm-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--text-primary) 4%, transparent); }
+        .fnm-icon {
+            flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 15px;
+            color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent);
+        }
+        .fnm-item h4 { margin: 0 0 3px; font-size: 14px; font-weight: 800; color: var(--text-primary); }
+        .fnm-item p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+        .fnm-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 14px 22px 4px; }
+        .fnm-links a {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 12.5px; text-decoration: none;
+            color: var(--text-secondary); border: 1px solid var(--border);
+        }
+        .fnm-links a:hover { color: var(--accent); border-color: var(--accent); }
         .fan-notice-modal-close {
-            margin-top: 6px; width: 100%; background:var(--accent); color:var(--accent-contrast); border: none;
-            padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;
+            display: block; width: calc(100% - 44px); margin: 14px 22px 22px; padding: 12px; border: none; border-radius: 12px;
+            background: var(--accent); color: var(--accent-contrast); font-weight: 800; font-size: 14px; cursor: pointer;
         }
+        .fan-notice-modal-close:hover { filter: brightness(1.08); }
+        .fnm-x {
+            position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer; z-index: 2;
+            background: rgba(255,255,255,.06); color: var(--text-muted); font-size: 14px;
+        }
+        .fnm-x:hover { background: rgba(255,255,255,.12); color: var(--text-primary); }
 
         .m-header {
             position: fixed; top: 28px; left: 0; right: 0; height: 56px; background-color:var(--bg-page);
@@ -346,16 +387,47 @@
     <script>window.MEMBER_IMAGES = {{ MEMBER_IMAGES | tojson }};</script>
     <script>window.GENERATION_REP_IMAGE_OVERRIDES = {{ GENERATION_REP_IMAGE_OVERRIDES | tojson }};</script>
     <div class="fan-notice-bar">
-        <span>스텔라이브 공식이 아닌 <b>팬 사이트</b>입니다(사이트 운영진은 개인주의입니다. 이상한 기능이 추가될 수 있음을 알고 계세요)</span>
+        <span>스텔라이브 공식 사이트가 아닌 <b>팬 사이트</b>입니다</span>
         <button class="fan-notice-link" id="m-fanNoticeOpenBtn">루미너스란?</button>
     </div>
     <div class="fan-notice-modal-overlay" id="fanNoticeModal">
-        <div class="fan-notice-modal-box">
-            <h3>'루미너스(Luminous)'란?</h3>
-            <p>루미너스는 스텔라이브(StelLive) 소속사의 공식 사이트가 아닌, 팬이 자율적으로 운영하는 비공식 2차 창작 팬 사이트입니다.</p>
-            <p>'루미너스(Luminous)'는 '은은하게 빛나는'이라는 뜻으로, 스텔라이브 멤버들을 향한 팬심을 조용히 빛내며 응원한다는 의미를 담은 팬덤 애칭입니다. 소속사와는 무관한 이름입니다.</p>
-            <p>본 사이트는 스텔라이브 2차 창작 가이드라인을 준수하며 비영리로 운영됩니다.</p>
-            <button class="fan-notice-modal-close" id="m-fanNoticeCloseBtn">닫기</button>
+        <div class="fan-notice-modal-box" role="dialog" aria-modal="true" aria-labelledby="fnmTitle">
+            <button type="button" class="fnm-x" aria-label="닫기" onclick="document.getElementById('fanNoticeModal').classList.remove('open')"><i class="fas fa-xmark"></i></button>
+            <div class="fnm-hero">
+                <img class="fnm-logo" src="{{ url_for('static', filename='logo/logo.webp') }}" alt="">
+                <h3 class="fnm-title" id="fnmTitle">루미너스 <span>Luminous</span></h3>
+                <p class="fnm-meaning"><b>은은하게 빛나는</b> · 스텔라이브 팬 사이트</p>
+            </div>
+            <div class="fnm-body">
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fas fa-heart"></i></div>
+                    <div><h4>팬이 만든 비공식 사이트예요</h4>
+                    <p>스텔라이브(StelLive) 소속사의 공식 사이트가 아니라, 팬이 자율적으로 운영하는 2차 창작 팬 사이트예요.</p></div>
+                </div>
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fas fa-star"></i></div>
+                    <div><h4>이름에 담긴 뜻</h4>
+                    <p>'루미너스'는 '은은하게 빛나는'이라는 뜻이에요. 멤버들을 향한 팬심을 조용히 빛내며 응원한다는 의미의 팬덤 애칭으로, 소속사와는 관계없는 이름이에요.</p></div>
+                </div>
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div><h4>비영리 · 가이드라인 준수</h4>
+                    <p>스텔라이브 2차 창작 가이드라인을 지키며, 광고나 후원 없이 비영리로 운영해요.</p></div>
+                </div>
+                <div class="fnm-item">
+                    <div class="fnm-icon"><i class="fab fa-github"></i></div>
+                    <div><h4>오픈소스예요</h4>
+                    <p>사이트 코드는 GitHub에 공개돼 있어요. 누구나 보고 의견을 낼 수 있어요.</p></div>
+                </div>
+            </div>
+            <div class="fnm-links">
+                <a href="https://github.com/Valley658/luminous" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
+                <a href="/updates"><i class="fas fa-bullhorn"></i> 업데이트 로그</a>
+                <a href="/credits"><i class="fas fa-images"></i> 크레딧</a>
+                <a href="/terms"><i class="fas fa-file-lines"></i> 이용약관</a>
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> 개인정보처리방침</a>
+            </div>
+            <button class="fan-notice-modal-close" id="m-fanNoticeCloseBtn">확인했어요</button>
         </div>
     </div>
 
@@ -392,6 +464,8 @@
             <button class="m-drawer-item" id="m-navInquiry" type="button"><i class="fas fa-comment-dots" style="color:var(--accent);"></i> 문의하기</button>
             <a class="m-drawer-item" href="/privacy" style="text-decoration:none; color:var(--text-muted); font-size:12.5px;"><i class="fas fa-user-shield"></i> 개인정보처리방침</a>
             <a class="m-drawer-item" href="/terms" style="text-decoration:none; color:var(--text-muted); font-size:12.5px;"><i class="fas fa-file-signature"></i> 이용약관</a>
+            <a class="m-drawer-item" href="/credits" style="text-decoration:none; color:var(--text-muted); font-size:12.5px;"><i class="fas fa-images"></i> 크레딧</a>
+            <a class="m-drawer-item" href="https://github.com/Valley658/luminous" target="_blank" rel="noopener" style="text-decoration:none; color:var(--text-muted); font-size:12.5px;"><i class="fab fa-github"></i> GitHub (오픈소스)</a>
         </div>
     </div>
 

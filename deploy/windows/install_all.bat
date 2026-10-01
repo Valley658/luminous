@@ -14,7 +14,7 @@ if not "%errorlevel%"=="0" (
 )
 
 if "%~1"=="1" (call :install_pastellive_app & exit /b)
-if "%~1"=="2" (call :install_pastellive_discord_bot & exit /b)
+if "%~1"=="2" (call :remove_discord_bot & exit /b)
 if "%~1"=="3" (call :install_nginx & exit /b)
 if "%~1"=="4" (call :install_meilisearch & exit /b)
 if "%~1"=="5" (call :install_cloudflared "%~2" & exit /b)
@@ -60,8 +60,8 @@ echo [2/9] pastellive app - SKIPPED (PastelliveApp is now Go - see install_all.b
 echo   Old-Python/ has been fully removed (rollback via install_all.bat 16 no longer
 echo   works - the target folder is gone) - NOT auto-redeployed here anymore.
 
-echo [3/9] pastellive discord bot (Go - discord-bot.exe)
-call :do_install_discord_bots
+echo [3/9] discord bot - removed 2026-10-01 (cleaning up old task if any)
+call :remove_discord_bot
 
 echo [5/9] nginx (port 80)
 powershell -NoProfile -Command "exit [int](-not (Get-NetTCPConnection -LocalPort 80 -State Listen -ErrorAction SilentlyContinue))" >nul 2>&1
@@ -106,11 +106,11 @@ exit /b 0
 cls
 echo   Pastellive Windows Deploy Tool
 echo  [1] Install/start pastellive app service
-echo  [2] Install/start pastellive discord bot (Go - ops bot)
+echo  [2] Remove old discord bot task (bot was removed 2026-10-01)
 echo  [3] Install/start nginx service (nginx.exe must already be installed)
 echo  [4] Install/start Meilisearch service
 echo  [5] Install Cloudflared tunnel service (token required)
-echo  [6] Install/start EVERYTHING (1,2,3,4 + Cloudflared)
+echo  [6] Install/start EVERYTHING (1,3,4 + Cloudflared)
 echo  [7] Diagnose: why isn't http://localhost loading?
 echo  [8] Set up/run automatic log rotation
 echo  [9] Tune MySQL (innodb_buffer_pool_size + slow query log)
@@ -129,7 +129,7 @@ echo  [0] Exit
 set /p CHOICE="Choose and press Enter: "
 
 if "%CHOICE%"=="1" (call :install_pastellive_app & goto menu)
-if "%CHOICE%"=="2" (call :install_pastellive_discord_bot & goto menu)
+if "%CHOICE%"=="2" (call :remove_discord_bot & goto menu)
 if "%CHOICE%"=="3" (call :install_nginx & goto menu)
 if "%CHOICE%"=="4" (call :install_meilisearch & goto menu)
 if "%CHOICE%"=="5" goto ask_cloudflared
@@ -172,8 +172,8 @@ setlocal
 set "ALL_TOKEN=%~1"
 echo [1/5] pastellive app service
 call :install_pastellive_app
-echo [2/5] pastellive discord bot (Go - ops bot)
-call :install_pastellive_discord_bot
+echo [2/5] discord bot - removed 2026-10-01
+call :remove_discord_bot
 echo [3/5] nginx service
 call :install_nginx
 echo [4/5] Meilisearch service
@@ -270,7 +270,6 @@ if errorlevel 1 (
 )
 
 call :rotate_stop_start "PastelliveApp" "%APPDIR%\logs" "service.log"
-call :rotate_stop_start "PastelliveDiscordBot" "%APPDIR%\logs" "discord_bot.log"
 call :rotate_stop_start "Meilisearch" "C:\meilisearch\logs" "meilisearch.log"
 call :rotate_nginx_reopen "C:\nginx\logs" "error.log"
 call :rotate_nginx_reopen "C:\nginx\logs" "timing.log"
@@ -361,9 +360,6 @@ echo   PastelliveApp is Go now - use option [14] to cut over to Go,
 echo   or [16] to roll back to Python (install_all.bat 14 / 16).
 exit /b 0
 
-:install_pastellive_discord_bot
-call :do_install_discord_bots
-exit /b 0
 
 :install_pastellive_rq_worker
 set "IPR_SILENT="
@@ -793,71 +789,14 @@ echo     Done - DB schema restored from %NEWEST_BACKUP%.
 if not "%AUTO_SILENT%"=="1" pause
 exit /b 0
 
-:do_install_discord_bots
-setlocal enabledelayedexpansion
-for %%I in ("%~dp0..\..") do set "APPDIR=%%~fI"
-set "GODIR=%APPDIR%\go-server"
-set "GOBIN=%GODIR%\bin"
-set "DBOT_EXE=%GOBIN%\discord-bot.exe"
-set "DBOT_RUNNER=%GOBIN%\_run_discordbot_loop.bat"
-if not exist "%GOBIN%" mkdir "%GOBIN%" >nul 2>&1
-
-echo ==============================================================
-echo  Discord bot (Go) install/restart - ops bot
-echo ==============================================================
-echo  Old-Python\app\discord_bot.py is gone - fully replaced by
-echo  discord-bot.exe (no Python needed). Reads the project-root .env
-echo  (DISCORD_BOT_TOKEN, DISCORD_ALERT_CHANNEL_ID) as before.
-echo.
-
-if not exist "%DBOT_EXE%" (
-    echo [Error] %DBOT_EXE% not found.
-    if not "%AUTO_SILENT%"=="1" pause
-    endlocal & exit /b 1
-)
-
-if exist "%GOBIN%\discord-bot.new.exe" (
-    echo [swap] Applying updated discord-bot.exe...
-    schtasks /end /tn "PastelliveDiscordBot" >nul 2>&1
-    if exist "%GOBIN%\discord-bot.old.exe" del /f /q "%GOBIN%\discord-bot.old.exe"
-    move /y "%DBOT_EXE%" "%GOBIN%\discord-bot.old.exe" >nul
-    move /y "%GOBIN%\discord-bot.new.exe" "%DBOT_EXE%" >nul
-)
-
-if not exist "%APPDIR%\logs" mkdir "%APPDIR%\logs" >nul 2>&1
-
-echo [1/3] Writing restart-loop wrapper script...
-(
-    echo @echo off
-    echo for %%%%I in ^("%%~dp0..\.."^) do set "PROJECT_DIR=%%%%~fI"
-    echo :loop
-    echo "%%~dp0discord-bot.exe" ^>^> "%%~dp0..\..\logs\discord_bot.log" 2^>^&1
-    echo echo [%%date%% %%time%%] discord-bot.exe exited, restarting in 5s ^>^> "%%~dp0..\..\logs\discord_bot.log"
-    echo timeout /t 5 /nobreak ^>nul
-    echo goto loop
-) > "%DBOT_RUNNER%"
-echo   Wrote %DBOT_RUNNER%
-
-echo [2/3] Registering PastelliveDiscordBot...
+:remove_discord_bot
+rem [2026-10-01] 디스코드 봇(운영봇)은 더 이상 쓰지 않아서 코드와 함께 삭제했다.
+rem 예전에 등록해 둔 작업 스케줄러 항목과 실행 중인 프로세스가 남아 있으면 정리만 한다.
+rem (디스코드 "로그인" 기능은 웹서버 안에 있어서 이것과 무관하게 그대로 동작함)
 schtasks /end /tn "PastelliveDiscordBot" >nul 2>&1
 schtasks /delete /tn "PastelliveDiscordBot" /f >nul 2>&1
-schtasks /create /tn "PastelliveDiscordBot" /tr "\"%DBOT_RUNNER%\"" /sc onstart /ru SYSTEM /rl HIGHEST /f
-if errorlevel 1 (
-    echo [Error] schtasks /create failed for PastelliveDiscordBot - see the error above.
-    echo         Common cause: not running this .bat as Administrator.
-    if not "%AUTO_SILENT%"=="1" pause
-    endlocal & exit /b 1
-)
-schtasks /run /tn "PastelliveDiscordBot"
-
-echo [3/3] Done.
-echo Check status:
-echo   schtasks /query /tn PastelliveDiscordBot /fo list
-echo Logs: %APPDIR%\logs\discord_bot.log
-echo To stop:    schtasks /end /tn PastelliveDiscordBot
-echo To restart: just run this script again (install_all.bat 2) - it is safe to re-run.
-if not "%AUTO_SILENT%"=="1" pause
-endlocal
+taskkill /f /im discord-bot.exe >nul 2>&1
+echo   Discord bot task removed (if it existed).
 exit /b 0
 
 :install_go_server

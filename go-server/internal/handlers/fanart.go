@@ -198,7 +198,11 @@ func (a *App) ensureFanartThumbnail(imageURL string) string {
 	}); ok {
 		return thumbURL
 	}
-	return ""
+	// 이미지 서비스가 꺼져 있으면 Go로 직접 JPEG 썸네일을 만든다(fanart_thumb.go).
+	if t := a.fanartThumbOnDisk(imageURL); t != "" {
+		return t
+	}
+	return a.makeFanartThumbGo(imageURL)
 }
 
 func (a *App) generateFanartLQIP(imageURL string) string {
@@ -534,6 +538,7 @@ func (a *App) ApiGetFanartHandler(w http.ResponseWriter, r *http.Request) {
 		httputil.JSON(w, http.StatusInternalServerError, map[string]any{"success": false, "message": "서버 오류가 발생했습니다."})
 		return
 	}
+	a.fillFanartThumbs(fanarts)
 	result := map[string]any{"success": true, "fanarts": fanarts}
 	a.Cache.Set(cacheKey, result, 60*time.Second)
 	writeJSON(w, result)
@@ -550,6 +555,7 @@ func (a *App) ApiGetMyFanartHandler(w http.ResponseWriter, r *http.Request) {
 		httputil.JSON(w, http.StatusInternalServerError, map[string]any{"success": false, "message": "서버 오류가 발생했습니다."})
 		return
 	}
+	a.fillFanartThumbs(fanarts)
 	writeJSON(w, map[string]any{"success": true, "fanarts": fanarts})
 }
 

@@ -72,5 +72,4 @@ function Apply-Swap {
 }
 
 Apply-Swap -BinDir $GoBin    -ExeName 'pastellive-server.exe'       -TaskName 'PastelliveApp'            -Port 8081
-Apply-Swap -BinDir $GoBin    -ExeName 'discord-bot.exe'             -TaskName 'PastelliveDiscordBot'
 Apply-Swap -BinDir $CImgBin  -ExeName 'pastellive-image-service.exe' -TaskName 'PastelliveCImageService' -Port 8091
