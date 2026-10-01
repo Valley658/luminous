@@ -50,66 +50,6 @@
   "modified": "잘라내기, 크기 줄임, webp 변환"
  },
  {
-  "file": "cake.webp",
-  "used_for": "생일 케이크 - 루미 채팅 스티커(생일)",
-  "source": "https://pngimg.com/image/97013",
-  "original": "https://pngimg.com/uploads/cake/cake_PNG97013.png",
-  "license": "CC BY-NC 4.0",
-  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
-  "author": "pngimg.com",
-  "modified": "잘라내기, 크기 줄임, webp 변환"
- },
- {
-  "file": "umbrella.webp",
-  "used_for": "우산 - 루미 채팅 스티커(날씨)",
-  "source": "https://pngimg.com/image/69220",
-  "original": "https://pngimg.com/uploads/umbrella/umbrella_PNG69220.png",
-  "license": "CC BY-NC 4.0",
-  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
-  "author": "pngimg.com",
-  "modified": "잘라내기, 크기 줄임, webp 변환"
- },
- {
-  "file": "headphones.webp",
-  "used_for": "헤드폰 - 루미 채팅 스티커(노래·음악)",
-  "source": "https://pngimg.com/image/101963",
-  "original": "https://pngimg.com/uploads/headphones/headphones_PNG101963.png",
-  "license": "CC BY-NC 4.0",
-  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
-  "author": "pngimg.com",
-  "modified": "잘라내기, 크기 줄임, webp 변환"
- },
- {
-  "file": "gamepad.webp",
-  "used_for": "게임패드 - 루미 채팅 스티커(게임)",
-  "source": "https://pngimg.com/image/79",
-  "original": "https://pngimg.com/uploads/gamepad/gamepad_PNG79.png",
-  "license": "CC BY-NC 4.0",
-  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
-  "author": "pngimg.com",
-  "modified": "잘라내기, 크기 줄임, webp 변환"
- },
- {
-  "file": "microphone.webp",
-  "used_for": "마이크 - 루미 채팅 스티커(방송)",
-  "source": "https://pngimg.com/image/101712",
-  "original": "https://pngimg.com/uploads/microphone/microphone_PNG101712.png",
-  "license": "CC BY-NC 4.0",
-  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
-  "author": "pngimg.com",
-  "modified": "잘라내기, 크기 줄임, webp 변환"
- },
- {
-  "file": "balloon.webp",
-  "used_for": "풍선 - 루미 채팅 스티커(기념일)",
-  "source": "https://pngimg.com/image/4958",
-  "original": "https://pngimg.com/uploads/balloon/balloon_PNG4958.png",
-  "license": "CC BY-NC 4.0",
-  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
-  "author": "pngimg.com",
-  "modified": "잘라내기, 크기 줄임, webp 변환"
- },
- {
   "file": "loupe.webp",
   "used_for": "돋보기 - 검색 결과 없음, 빈 목록",
   "source": "https://pngimg.com/image/103256",

@@ -41,10 +41,6 @@
         .d-badge img { width: 44px; height: 44px; object-fit: contain; }
         .d-badge .num { position: absolute; bottom: 5px; left: 0; right: 0; color: #fff; font-weight: 900; font-size: 13px; }
         .d-badge p { margin: 8px 0 0; color: #000; font-size: 11.5px; font-weight: 700; line-height: 1.3; }
-        .d-chat { width: 100%; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; line-height: 1.5; }
-        .d-chat .u { align-self: flex-end; background: #38bdf8; color: #06202d; padding: 7px 12px; border-radius: 14px; }
-        .d-chat .a { align-self: flex-start; background: #262a33; color: #e5e7eb; padding: 7px 12px; border-radius: 14px; max-width: 90%; }
-        .d-chat img { width: 54px; height: 54px; object-fit: contain; margin-left: 6px; animation: dPop .45s cubic-bezier(.175,.885,.32,1.275); }
         .d-empty { text-align: center; color: #9aa3b5; font-size: 13.5px; }
         .d-empty img { display: block; width: 78px; margin: 0 auto 8px; }
         .d-pop { position: relative; height: 90px; width: 100%; display: grid; place-items: center; }
@@ -53,7 +49,7 @@
         .d-page img { width: 92px; display: block; margin: 0 auto 6px; }
         .d-page a { display: inline-block; margin-top: 8px; font-weight: 700; }
         @keyframes dPop { from { transform: scale(.3) rotate(-15deg); opacity: 0; } to { transform: none; opacity: 1; } }
-        @media (prefers-reduced-motion: reduce) { .d-chat img, .d-pop img { animation: none; } }
+        @media (prefers-reduced-motion: reduce) { .d-pop img { animation: none; } }
     </style>
 </head>
 <body>
@@ -99,9 +95,6 @@
     <script>
     (function () {
         var IMG = '/static/images/pngimg/';
-        function chat(q, a, img) {
-            return '<div class="d-chat"><div class="u">' + q + '</div><div class="a">' + a + '</div><img src="' + IMG + img + '" alt=""></div>';
-        }
         var DEMOS = {
             'gift.webp': function () { return '<span class="d-attend"><img src="' + IMG + 'gift.webp" alt=""> 출석체크 하고 뱃지 받기</span>'; },
             'coin.webp': function () {
@@ -111,12 +104,6 @@
             'trophy.webp': function () { return '<div class="d-badge"><div class="box" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)"><img src="' + IMG + 'trophy.webp" alt=""><div class="num">60</div></div><p>60일 연속 출석<br>체크</p></div>'; },
             'medal.webp': function () { return '<div class="d-badge"><div class="box" style="background:linear-gradient(135deg,#10b981,#059669)"><img src="' + IMG + 'medal.webp" alt=""><div class="num">7</div></div><p>7일 연속 출석<br>진행 중!</p></div>'; },
             'party_popper.webp': function () { return '<div class="d-pop"><img src="' + IMG + 'party_popper.webp" alt=""></div>'; },
-            'cake.webp': function () { return chat('유니 생일이 언제야?', '유니 생일은 8월이야! 같이 축하해 주자~', 'cake.webp'); },
-            'umbrella.webp': function () { return chat('오늘 날씨 어때?', '그건 나도 잘 몰라! 나가기 전에 날씨 앱 한 번 확인해 줘~', 'umbrella.webp'); },
-            'headphones.webp': function () { return chat('마시로 노래 추천해 줘', '마시로 커버곡 중에 망상 아스파람 진짜 좋아!', 'headphones.webp'); },
-            'gamepad.webp': function () { return chat('리제는 무슨 게임 해?', '리제는 여러 게임을 하는데 방송 다시보기에서 찾아볼 수 있어!', 'gamepad.webp'); },
-            'microphone.webp': function () { return chat('지금 방송 중인 사람 있어?', '지금 라이브 중인 멤버는 왼쪽 사이드바에서 바로 볼 수 있어!', 'microphone.webp'); },
-            'balloon.webp': function () { return chat('스텔라이브 데뷔 기념일 알려줘', '기념일은 다 같이 축하해야지! 공식 채널 공지를 확인해 봐~', 'balloon.webp'); },
             'loupe.webp': function () { return '<div class="d-empty"><img src="' + IMG + 'loupe.webp" alt="">"없는검색어"에 대한 검색 결과가 없습니다.</div>'; },
             'octopus_lost.webp': function () { return '<div class="d-page"><img src="' + IMG + 'octopus_lost.webp" alt="">여긴 아무것도 없어!<br><a href="/credits-test-404" target="_blank" rel="noopener">실제 404 화면 열기</a></div>'; },
             'octopus_busy.webp': function () { return '<div class="d-page"><img src="' + IMG + 'octopus_busy.webp" alt="">잠시 후 다시 시도해주세요<br><a href="/50x.html" target="_blank" rel="noopener">실제 점검 화면 열기</a></div>'; }

@@ -17,6 +17,15 @@ package handlers
 //   - VOICESTUDIO_VOICE 가 비어 있으면 기능 전체가 꺼진다(버튼도 안 보임).
 //   - 목소리(VOICESTUDIO_VOICE)를 바꾸면 파일 이름(해시)이 달라져서 새 목소리로 다시 만들어진다.
 //
+// 음성 파일 보관/재사용 (2026-10-02)
+//   - 만든 음성 파일은 지우지 않고 계속 쌓아 둔다(문장 하나당 수십 KB).
+//   - 답변을 "문장 단위"로 잘라서 문장마다 따로 녹음/저장한다. 다른 방문자의 답변에
+//     같은 문장("왼쪽 사이드바에서 바로 보러 갈 수 있어!" 같은)이 나오면 그 문장은
+//     새로 만들지 않고 저장된 파일을 그대로 쓴다 → 쓸수록 바로 나오는 문장이 늘어난다.
+//   - 브라우저는 문장 파일 목록(urls)을 받아 차례대로 이어서 재생하고, 앞 문장이
+//     준비되면 나머지가 만들어지는 동안 먼저 재생을 시작한다.
+//   - 예전 방식(답변 통째로 한 파일)으로 만든 파일이 있으면 그것도 그대로 쓴다.
+//
 // .env 설정
 //   VOICESTUDIO_VOICE=<VoiceStudio에서 만든 루미 목소리 ID>   (필수, 비우면 기능 꺼짐)
 //   VOICESTUDIO_URL=http://127.0.0.1:3900                    (기본값)
@@ -98,6 +107,86 @@ func lumiVoiceFileName(c lumiVoiceConf, text string) string {
 }
 
 func (a *App) lumiVoiceDir() string { return filepath.Join(a.Cfg.StaticDir, "lumi_voice") }
+
+func (a *App) lumiVoiceHas(name string) bool {
+	_, err := os.Stat(filepath.Join(a.lumiVoiceDir(), name))
+	return err == nil
+}
+
+/* ---------- 문장 단위로 자르기 ---------- */
+
+var (
+	reVoiceSentenceEnd = regexp.MustCompile(`[.!?。~…]+["')\]」』]*(\s+|$)|\n+`)
+	reVoiceRepeatPunct = regexp.MustCompile(`([!?~.])[!?~.]+`)
+)
+
+const (
+	lumiVoiceSegMinRunes = 8  // 이보다 짧은 조각("응!", "좋아!")은 다음 문장에 붙여서 자연스럽게 읽힌다
+	lumiVoiceSegMax      = 24 // 문장이 너무 많으면 뒤쪽은 합쳐서 하나로
+)
+
+// lumiVoiceNormSeg 는 같은 문장을 같은 파일로 찾기 위한 정리(띄어쓰기/반복 문장부호만 통일).
+func lumiVoiceNormSeg(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	s = reVoiceRepeatPunct.ReplaceAllString(s, "$1")
+	return strings.TrimSpace(s)
+}
+
+// lumiVoiceSegments 는 답변을 읽을 문장 목록으로 자른다.
+func lumiVoiceSegments(text string) []string {
+	sp := lumiVoiceSpeakable(text)
+	if sp == "" {
+		return nil
+	}
+	var raw []string
+	last := 0
+	for _, m := range reVoiceSentenceEnd.FindAllStringIndex(sp, -1) {
+		raw = append(raw, sp[last:m[1]])
+		last = m[1]
+	}
+	if last < len(sp) {
+		raw = append(raw, sp[last:])
+	}
+	var out []string
+	carry := ""
+	for _, r := range raw {
+		seg := lumiVoiceNormSeg(carry + " " + r)
+		if seg == "" {
+			continue
+		}
+		if utf8.RuneCountInString(seg) < lumiVoiceSegMinRunes {
+			carry = seg
+			continue
+		}
+		carry = ""
+		out = append(out, seg)
+	}
+	if carry != "" {
+		if len(out) > 0 {
+			out[len(out)-1] = lumiVoiceNormSeg(out[len(out)-1] + " " + carry)
+		} else {
+			out = append(out, carry)
+		}
+	}
+	if len(out) > lumiVoiceSegMax {
+		tail := strings.Join(out[lumiVoiceSegMax-1:], " ")
+		out = append(out[:lumiVoiceSegMax-1], tail)
+	}
+	return out
+}
+
+// lumiVoicePlan 은 답변 하나를 재생할 파일 목록. 예전 방식의 통째 파일이 있으면 그것 하나.
+func (a *App) lumiVoicePlan(c lumiVoiceConf, text string) []string {
+	if whole := lumiVoiceFileName(c, text); a.lumiVoiceHas(whole) {
+		return []string{whole}
+	}
+	segs := lumiVoiceSegments(text)
+	names := make([]string, len(segs))
+	for i, seg := range segs {
+		names[i] = lumiVoiceFileName(c, seg)
+	}
+	return names
+}
 
 /* ---------- 루미가 실제로 한 말 기록 ---------- */
 
@@ -231,7 +320,7 @@ var lumiVoiceSem = make(chan struct{}, 1)
 var (
 	reMdLink   = regexp.MustCompile(`\[([^\]]+)\]\([^)]*\)`)
 	reURL      = regexp.MustCompile(`https?://\S+`)
-	reMdMarks  = regexp.MustCompile("[*_`#>~|]+")
+	reMdMarks  = regexp.MustCompile("[*_`#>|]+|~~") // 한 개짜리 ~ 는 말끝("~")이라 남겨 둔다(문장 자르기에 씀)
 	reEmoji    = regexp.MustCompile(`[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{FE0F}\x{200D}]`)
 	reSpaces   = regexp.MustCompile(`[ \t]+`)
 	reNewlines = regexp.MustCompile(`\n{2,}`)
@@ -367,12 +456,24 @@ func (a *App) ApiLumiVoiceHandler(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, http.StatusBadRequest, "이 답변은 너무 길어서 읽어 줄 수가 없어!")
 		return
 	}
-	url := "/static/lumi_voice/"
-	name := lumiVoiceFileName(c, text)
-	if _, err := os.Stat(filepath.Join(a.lumiVoiceDir(), name)); err == nil {
-		writeJSON(w, map[string]any{"success": true, "url": url + name})
+	plan := a.lumiVoicePlan(c, text)
+	if len(plan) == 0 {
+		httputil.JSONError(w, http.StatusBadRequest, "읽을 내용이 없어!")
 		return
 	}
+	// 앞에서부터 이미 있는 문장 파일들(먼저 재생 시작용)
+	var ready []string
+	for _, n := range plan {
+		if !a.lumiVoiceHas(n) {
+			break
+		}
+		ready = append(ready, "/static/lumi_voice/"+n)
+	}
+	if len(ready) == len(plan) {
+		writeJSON(w, map[string]any{"success": true, "url": ready[0], "urls": ready, "total": len(plan)})
+		return
+	}
+	name := lumiVoiceFileName(c, text) // 이 답변의 생성 작업 이름
 	if !(lumiVoiceWasSaid(text) || lumiVoiceIsFixed(text) || a.lumiVoiceInHistory(sessionUserID(r), text)) {
 		httputil.JSONError(w, http.StatusForbidden, "루미가 한 말만 읽어 줄 수 있어!")
 		return
@@ -395,7 +496,7 @@ func (a *App) ApiLumiVoiceHandler(w http.ResponseWriter, r *http.Request) {
 		a.lumiVoiceStartBackground(c, text)
 	}
 	w.WriteHeader(http.StatusAccepted)
-	writeJSON(w, map[string]any{"success": true, "pending": true})
+	writeJSON(w, map[string]any{"success": true, "pending": true, "urls": ready, "total": len(plan)})
 }
 
 /* ---------- 백그라운드 생성 (중복 방지 + 실패 기록) ---------- */
@@ -435,9 +536,19 @@ func (a *App) lumiVoiceStartBackground(c lumiVoiceConf, text string) {
 	delete(lumiVoiceJobs.failed, name)
 	lumiVoiceJobs.Unlock()
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[루미 목소리] 생성 중 오류: %v", r)
+			}
+		}()
 		ctx, cancel := context.WithTimeout(context.Background(), lumiVoiceGenTimeout+lumiVoiceQueueWait*2)
 		defer cancel()
-		_, err := a.lumiVoiceEnsure(ctx, c, text)
+		var err error
+		for _, seg := range a.lumiVoiceSegmentsToMake(c, text) {
+			if _, err = a.lumiVoiceEnsure(ctx, c, seg); err != nil {
+				break
+			}
+		}
 		lumiVoiceJobs.Lock()
 		delete(lumiVoiceJobs.inflight, name)
 		if err != nil {
@@ -458,10 +569,24 @@ func (a *App) lumiVoicePrefetch(text string) {
 	if !c.Enabled || text == "" || utf8.RuneCountInString(text) > lumiVoiceMaxRunes {
 		return
 	}
-	if _, err := os.Stat(filepath.Join(a.lumiVoiceDir(), lumiVoiceFileName(c, text))); err == nil {
+	if len(a.lumiVoiceSegmentsToMake(c, text)) == 0 {
 		return
 	}
 	a.lumiVoiceStartBackground(c, text)
+}
+
+// lumiVoiceSegmentsToMake 는 이 답변에서 아직 녹음 안 된 문장들(순서대로).
+func (a *App) lumiVoiceSegmentsToMake(c lumiVoiceConf, text string) []string {
+	if a.lumiVoiceHas(lumiVoiceFileName(c, text)) {
+		return nil
+	}
+	var out []string
+	for _, seg := range lumiVoiceSegments(text) {
+		if !a.lumiVoiceHas(lumiVoiceFileName(c, seg)) {
+			out = append(out, seg)
+		}
+	}
+	return out
 }
 
 /* ---------- 고정 멘트 미리 녹음 ---------- */
@@ -486,12 +611,19 @@ func (a *App) lumiVoiceWarmupOnce() {
 	}
 	made, failed := 0, 0
 	for _, line := range lumiVoiceFixedLines() {
-		if _, err := os.Stat(filepath.Join(a.lumiVoiceDir(), lumiVoiceFileName(c, line))); err == nil {
+		todo := a.lumiVoiceSegmentsToMake(c, line)
+		if len(todo) == 0 {
 			continue
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), lumiVoiceGenTimeout+lumiVoiceQueueWait)
-		_, err := a.lumiVoiceEnsure(ctx, c, line)
-		cancel()
+		var err error
+		for _, seg := range todo {
+			ctx, cancel := context.WithTimeout(context.Background(), lumiVoiceGenTimeout+lumiVoiceQueueWait)
+			_, err = a.lumiVoiceEnsure(ctx, c, seg)
+			cancel()
+			if err != nil {
+				break
+			}
+		}
 		if err != nil {
 			failed++
 			if failed == 1 {

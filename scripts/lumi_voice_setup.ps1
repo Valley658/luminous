@@ -4,7 +4,9 @@
 #  3. .env 에 VOICESTUDIO_VOICE 저장
 #  4. 예전 디스코드 봇 작업 정리, nginx 설정 다시 읽기(SYSTEM 권한으로)
 #  5. 빌드배포.bat 실행 → 서버가 켜지면 고정 멘트 자동 녹음 확인
-param([string]$AppDir = "")
+param([string]$AppDir = "", [switch]$VoiceOnly)
+# -VoiceOnly : 목소리만 바꾸기 (scripts\루미목소리_바꾸기.bat). 4~5단계는 건너뜀.
+$StartedAt = Get-Date
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -224,6 +226,7 @@ Set-EnvValue "VOICESTUDIO_VOICE" $chosen
 if ($VsBase -ne "http://127.0.0.1:3900") { Set-EnvValue "VOICESTUDIO_URL" $VsBase; Say "  VOICESTUDIO_URL=$VsBase" "Green" }
 Say "  VOICESTUDIO_VOICE=$chosen  (예전 .env 는 .env.bak_lumivoice 로 백업)" "Green"
 
+if (-not $VoiceOnly) {
 # ---------- 4. 디스코드 봇 정리 ----------
 Step "4/6" "예전 디스코드 봇 작업 정리"
 cmd.exe /d /c "schtasks /end /tn PastelliveDiscordBot >nul 2>&1 & schtasks /delete /tn PastelliveDiscordBot /f >nul 2>&1" | Out-Null
@@ -248,6 +251,7 @@ if (Test-Path $exe) {
         Say "  nginx 다시 읽기 완료." "Green"
     }
 } else { Say "  C:\nginx 가 없어서 건너뜀." "Yellow" }
+} # -not $VoiceOnly
 
 # ---------- 6. 빌드 + 배포 ----------
 Step "6/6" "루미너스 서버 빌드 + 다시 시작 (빌드배포.bat)"
@@ -266,11 +270,12 @@ if (-not $ok) {
     Say "  루미 목소리 켜짐! 고정 멘트를 미리 녹음하는 중이에요 (최대 몇 분)..." "Green"
     $dir = Join-Path $AppDir "static\lumi_voice"
     for ($i = 0; $i -lt 60; $i++) {
-        $n = @(Get-ChildItem $dir -Filter *.mp3 -ErrorAction SilentlyContinue).Count
+        $n = @(Get-ChildItem $dir -Filter *.mp3 -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $StartedAt }).Count
         Write-Host -NoNewline "`r  녹음된 멘트: $n 개   "
         if ($n -ge 10) { break }
         Start-Sleep -Seconds 5
     }
     Write-Host ""
+    Say "  (나머지 고정 멘트는 서버가 뒤에서 계속 녹음해요. 예전 목소리 파일은 지우지 않고 남겨 둬요)" "DarkGray"
     Say "  사이트에서 루미에게 말을 걸고 답변 옆 🔊 버튼을 눌러 보세요." "Green"
 }
