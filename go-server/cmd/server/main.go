@@ -359,6 +359,12 @@ func main() {
 	r.Get("/api/code/tree", app.ApiCodeTreeHandler)
 	r.Get("/api/code/file", app.ApiCodeFileHandler)
 	r.Get("/api/code/raw", app.ApiCodeRawHandler)
+	r.Get("/api/code/history", app.ApiCodeHistoryHandler)
+	r.Get("/api/code/commits", app.ApiCodeCommitsHandler)
+	r.Get("/api/code/commit", app.ApiCodeCommitHandler)
+	r.Get("/api/code/blame", app.ApiCodeBlameHandler)
+	r.Get("/api/code/search", app.ApiCodeSearchHandler)
+	r.Get("/api/code/github", app.ApiCodeGitHubHandler)
 	r.NotFound(app.NotFoundHandler) // 없는 주소 → 길 잃은 문어 404 페이지 (credits.go)
 	r.Get("/api/live_status", app.ApiLiveStatusHandler)
 

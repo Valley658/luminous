@@ -39,10 +39,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [0/4] 사이트 JS 난독화 빌드 ^(frontend\js -^> static\js^)
+echo [0/4] 사이트 JS 압축 빌드 ^(frontend\js -^> static\js^)
 where node >nul 2>&1
 if errorlevel 1 (
-    echo   Node.js가 없어서 JS 난독화는 건너뜀 ^(static\js 는 그대로^).
+    echo   Node.js가 없어서 JS 빌드는 건너뜀 ^(static\js 는 그대로^).
 ) else (
     call "%APPDIR%\scripts\JS빌드.bat" nopause
 )

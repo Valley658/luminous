@@ -16,7 +16,9 @@
          * 새 업데이트를 추가하려면 <main class="ud-timeline"> 맨 위에 <article class="ud-entry"> 하나를
          * 복사해 붙이고 내용만 바꾸면 돼요. li 의 data-kind 는 new / improve / fix / security 중 하나,
          * article 의 data-kinds 에는 그 안에 들어 있는 종류를 띄어쓰기로 적어요(필터용).
-         * "최신" 표시는 맨 위 항목에만 붙여 주세요. */
+         * "최신" 표시는 맨 위 항목에만 붙여 주세요.
+         * 코드 연결: 각 항목 아래에 "이날의 코드 변경 N개" 링크가 날짜(ud-y + ud-md)로 자동으로 붙어요(/code 커밋 목록).
+         * 특정 커밋을 직접 연결하려면 article 에 data-commits="28da1ea 78d2c32" 처럼 커밋 해시를 띄어쓰기로 적어요. */
         .ud-hero { max-width: 880px; margin: 0 auto; padding: 48px 20px 8px; }
         .ud-hero h1 { margin: 0; font-size: clamp(30px, 4.4vw, 44px); font-weight: 900; letter-spacing: -1px; line-height: 1.2; }
         .ud-hero h1 .wave { display: inline-block; transform-origin: 70% 70%; }
@@ -91,6 +93,12 @@
             .ud-list li { flex-direction: column; gap: 4px; padding: 8px 4px; }
             .ud-filters { top: 57px; }
         }
+        /* 업데이트 ↔ 코드(커밋) 연결 */
+        .ud-code { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--pc-line); }
+        .ud-code a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+            text-decoration: none; color: var(--pc-sub); background: var(--pc-surface-2); border: 1px solid var(--pc-line); }
+        .ud-code a:hover { color: var(--pc-accent); border-color: var(--pc-accent); }
+        .ud-code a code { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -261,6 +269,37 @@
         });
         var h = location.hash.slice(1);
         if (h) { var t = document.querySelector('.ud-filter[data-f="' + h + '"]'); if (t) t.click(); }
+    })();
+    </script>
+    <script>
+    // 업데이트 항목마다 그날 GitHub에 올라간 커밋(코드 변경)으로 가는 링크를 붙인다.
+    (function () {
+        var entries = document.querySelectorAll('.ud-entry');
+        if (!entries.length || !window.fetch) return;
+        function pad(n) { n = String(parseInt(n, 10)); return n.length < 2 ? '0' + n : n; }
+        function kstDay(iso) { var d = new Date(iso); if (isNaN(d)) return ''; return new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10); }
+        fetch('/api/code/history').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j || !j.success) return;
+            var per = {};
+            (j.activity || []).forEach(function (iso) { var k = kstDay(iso); if (k) per[k] = (per[k] || 0) + 1; });
+            entries.forEach(function (a) {
+                var y = a.querySelector('.ud-y'), md = a.querySelector('.ud-md'), card = a.querySelector('.ud-card');
+                if (!y || !md || !card) return;
+                var p = md.textContent.trim().split('.');
+                if (p.length < 2) return;
+                var date = y.textContent.trim() + '-' + pad(p[0]) + '-' + pad(p[1]), n = per[date] || 0;
+                var hashes = (a.getAttribute('data-commits') || '').split(/\s+/).filter(function (h) { return /^[0-9a-f]{7,40}$/i.test(h); });
+                if (!n && !hashes.length) return;
+                var box = document.createElement('div');
+                box.className = 'ud-code';
+                var html = hashes.map(function (h) {
+                    return '<a href="/code?view=commit&hash=' + h + '" title="이 업데이트의 코드 변경 보기"><i class="fas fa-code-commit"></i> 커밋 <code>' + h.slice(0, 7) + '</code></a>';
+                }).join('');
+                if (n) html += '<a href="/code?view=commits&date=' + date + '"><i class="fas fa-code"></i> 이날의 코드 변경 ' + n + '개 보기</a>';
+                box.innerHTML = html;
+                card.appendChild(box);
+            });
+        }).catch(function () {});
     })();
     </script>
 </body>

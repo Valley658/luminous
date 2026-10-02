@@ -18,9 +18,11 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,6 +37,7 @@ const (
 	codeMaxViewBytes     = 1 << 20          // 화면에 보여줄 최대 파일 크기(1MB)
 	codeBlobCacheBytes   = 32 << 20         // 파일 내용 캐시 최대 용량
 	codeGitTimeout       = 15 * time.Second
+	codeRawMaxBytes      = 20 << 20 // Raw로 직접 내려줄 최대 크기(넘으면 GitHub로)
 	codeGitHubURL        = "https://github.com/Valley658/luminous"
 )
 
@@ -58,14 +61,49 @@ type codeSnapshot struct {
 	Ref       string
 	Date      string
 	Message   string
+	Author    string
+	Count     int
+	Languages []codeLang
 	Entries   []codeEntry
 	byPath    map[string]codeEntry
+	dirs      map[string]bool
 	checkedAt time.Time
+}
+
+type codeLang struct {
+	Name    string  `json:"name"`
+	Color   string  `json:"color"`
+	Bytes   int64   `json:"bytes"`
+	Percent float64 `json:"percent"`
+}
+
+type codeCommitInfo struct {
+	Hash    string `json:"hash"`
+	Author  string `json:"author"`
+	Date    string `json:"date"`
+	Message string `json:"message"`
+}
+
+// 파일/폴더별 "마지막으로 바뀐 커밋" (GitHub 파일 목록 오른쪽에 나오는 커밋 메시지와 시간)
+type codeHistory struct {
+	Commit       string
+	Commits      []codeCommitInfo
+	Last         map[string]int
+	All          []string          // 이 커밋까지의 전체 커밋 해시(최신순) - 커밋 주소 검증용
+	Activity     []string          // 커밋 날짜(최신순) - 활동 그래프용
+	Contributors []codeContributor // 기여자별 커밋 수
+}
+
+type codeContributor struct {
+	Name    string `json:"name"`
+	Commits int    `json:"commits"`
 }
 
 type codeBrowser struct {
 	mu        sync.Mutex
 	snap      *codeSnapshot
+	histMu    sync.Mutex
+	hist      *codeHistory
 	blobMu    sync.Mutex
 	blobs     map[string][]byte
 	blobBytes int
@@ -90,7 +128,11 @@ func codeGitBinary() string {
 }
 
 func (a *App) runGit(args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), codeGitTimeout)
+	return a.runGitTimeout(codeGitTimeout, args...)
+}
+
+func (a *App) runGitTimeout(timeout time.Duration, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	// safe.directory: 서버가 다른 계정(작업 스케줄러 등)으로 돌 때 "dubious ownership" 거부 방지
 	full := append([]string{"-c", "safe.directory=*", "-c", "core.quotepath=off"}, args...)
@@ -141,7 +183,7 @@ func (a *App) codeSnapshot() (*codeSnapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	snap := &codeSnapshot{Commit: commit, Ref: ref, byPath: map[string]codeEntry{}, checkedAt: time.Now()}
+	snap := &codeSnapshot{Commit: commit, Ref: ref, byPath: map[string]codeEntry{}, dirs: map[string]bool{}, checkedAt: time.Now()}
 	for _, rec := range bytes.Split(out, []byte{0}) {
 		if len(rec) == 0 {
 			continue
@@ -167,14 +209,27 @@ func (a *App) codeSnapshot() (*codeSnapshot, error) {
 		}
 		snap.Entries = append(snap.Entries, e)
 		snap.byPath[e.Path] = e
+		for d := path.Dir(e.Path); d != "." && d != "/"; d = path.Dir(d) {
+			if snap.dirs[d] {
+				break
+			}
+			snap.dirs[d] = true
+		}
 	}
-	if info, err := a.runGit("log", "-1", "--format=%cI%x00%s", commit); err == nil {
-		parts := strings.SplitN(strings.TrimRight(string(info), "\r\n"), "\x00", 2)
+	if info, err := a.runGit("log", "-1", "--format=%cI%x00%s%x00%an", commit); err == nil {
+		parts := strings.SplitN(strings.TrimRight(string(info), "\r\n"), "\x00", 3)
 		snap.Date = parts[0]
 		if len(parts) > 1 {
 			snap.Message = parts[1]
 		}
+		if len(parts) > 2 {
+			snap.Author = parts[2]
+		}
 	}
+	if n, err := a.runGit("rev-list", "--count", commit); err == nil {
+		snap.Count, _ = strconv.Atoi(strings.TrimSpace(string(n)))
+	}
+	snap.Languages = codeLanguages(snap.Entries)
 	codeRepo.snap = snap
 	return snap, nil
 }
@@ -254,6 +309,9 @@ func (a *App) ApiCodeTreeHandler(w http.ResponseWriter, r *http.Request) {
 		"ref":        snap.Ref,
 		"date":       snap.Date,
 		"message":    snap.Message,
+		"author":     snap.Author,
+		"count":      snap.Count,
+		"languages":  snap.Languages,
 		"github_url": codeGitHubURL,
 		"files":      snap.Entries,
 	})
@@ -305,7 +363,9 @@ func (a *App) ApiCodeFileHandler(w http.ResponseWriter, r *http.Request) {
 	httputil.JSONOK(w, resp)
 }
 
-// GET /api/code/raw?path=... - 이미지 미리보기 전용(이미지 외에는 내려주지 않음)
+// GET /api/code/raw?path=...[&download=1] - 파일 원본 (GitHub의 Raw / 다운로드 버튼)
+// 이미지는 이미지로, 그 외에는 전부 text/plain 또는 octet-stream 으로만 내려서
+// 저장소 안의 HTML/SVG가 이 사이트 주소에서 실행되는 일이 없게 한다(+ sandbox CSP).
 func (a *App) ApiCodeRawHandler(w http.ResponseWriter, r *http.Request) {
 	p := r.URL.Query().Get("path")
 	snap, err := a.codeSnapshot()
@@ -314,19 +374,179 @@ func (a *App) ApiCodeRawHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	e, ok := snap.byPath[p]
-	ctype, isImg := codeImageTypes[strings.ToLower(path.Ext(p))]
-	if !ok || !isImg || e.Kind != "file" || e.Size > 8<<20 {
+	if !ok || e.Kind != "file" {
 		http.NotFound(w, r)
+		return
+	}
+	ghRaw := codeGitHubURL + "/raw/" + snap.Commit + "/" + codeEscapePath(e.Path)
+	if e.Size > codeRawMaxBytes {
+		http.Redirect(w, r, ghRaw, http.StatusFound)
 		return
 	}
 	b, err := a.codeBlob(e.hash)
-	if err != nil || bytes.HasPrefix(b, []byte("version https://git-lfs")) {
-		http.NotFound(w, r)
+	if err != nil {
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
 		return
+	}
+	if bytes.HasPrefix(b, []byte("version https://git-lfs")) {
+		// LFS 파일의 실제 내용은 GitHub LFS 저장소에만 있다
+		http.Redirect(w, r, ghRaw, http.StatusFound)
+		return
+	}
+	ctype, isImg := codeImageTypes[strings.ToLower(path.Ext(p))]
+	switch {
+	case isImg:
+	case codeLooksBinary(b):
+		ctype = "application/octet-stream"
+	default:
+		ctype = "text/plain; charset=utf-8"
+	}
+	name := path.Base(e.Path)
+	if r.URL.Query().Get("download") == "1" {
+		w.Header().Set("Content-Disposition", "attachment; filename*=UTF-8''"+url.PathEscape(name))
+	} else {
+		w.Header().Set("Content-Disposition", "inline; filename*=UTF-8''"+url.PathEscape(name))
 	}
 	w.Header().Set("Content-Type", ctype)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox")
+	w.Header().Set("Cache-Control", "public, max-age=300")
 	_, _ = w.Write(b)
+}
+
+func codeEscapePath(p string) string {
+	parts := strings.Split(p, "/")
+	for i, s := range parts {
+		parts[i] = url.PathEscape(s)
+	}
+	return strings.Join(parts, "/")
+}
+
+// GET /api/code/history - 파일/폴더마다 마지막으로 바뀐 커밋
+func (a *App) ApiCodeHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	h, err := a.codeHistory()
+	if err != nil {
+		log.Printf("[코드 탐색기] 커밋 기록 읽기 실패: %v", err)
+		httputil.JSONError(w, http.StatusServiceUnavailable, "커밋 기록을 불러오지 못했어요.")
+		return
+	}
+	w.Header().Set("Cache-Control", "public, max-age=60")
+	httputil.JSONOK(w, map[string]any{"commit": h.Commit, "commits": h.Commits, "last": h.Last,
+		"activity": h.Activity, "contributors": h.Contributors, "total": len(h.All)})
+}
+
+func (a *App) codeHistory() (*codeHistory, error) {
+	snap, err := a.codeSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	codeRepo.histMu.Lock()
+	defer codeRepo.histMu.Unlock()
+	if h := codeRepo.hist; h != nil && h.Commit == snap.Commit {
+		return h, nil
+	}
+	out, err := a.runGitTimeout(90*time.Second, "log", "--no-renames", "--name-only",
+		"--format=%x1e%H%x1f%an%x1f%cI%x1f%s", snap.Commit)
+	if err != nil {
+		return nil, err
+	}
+	h := &codeHistory{Commit: snap.Commit, Last: map[string]int{}}
+	remaining := len(snap.byPath)
+	byAuthor := map[string]int{}
+	for _, chunk := range strings.Split(string(out), "\x1e") {
+		lines := strings.Split(strings.ReplaceAll(chunk, "\r", ""), "\n")
+		head := strings.SplitN(lines[0], "\x1f", 4)
+		if len(head) < 4 {
+			continue
+		}
+		h.All = append(h.All, head[0])
+		h.Activity = append(h.Activity, head[2])
+		byAuthor[head[1]]++
+		if remaining == 0 {
+			continue
+		}
+		idx := -1
+		for _, f := range lines[1:] {
+			if f == "" {
+				continue
+			}
+			if _, inTree := snap.byPath[f]; !inTree {
+				continue
+			}
+			if _, done := h.Last[f]; done {
+				continue
+			}
+			if idx < 0 {
+				h.Commits = append(h.Commits, codeCommitInfo{Hash: head[0], Author: head[1], Date: head[2], Message: head[3]})
+				idx = len(h.Commits) - 1
+			}
+			h.Last[f] = idx
+			remaining--
+			for d := path.Dir(f); d != "." && d != "/"; d = path.Dir(d) {
+				if _, done := h.Last[d]; done {
+					break
+				}
+				h.Last[d] = idx
+			}
+		}
+	}
+	for name, n := range byAuthor {
+		h.Contributors = append(h.Contributors, codeContributor{Name: name, Commits: n})
+	}
+	sort.Slice(h.Contributors, func(i, j int) bool { return h.Contributors[i].Commits > h.Contributors[j].Commits })
+	codeRepo.hist = h
+	return h, nil
+}
+
+// GitHub(linguist)처럼 저장소 언어 비율을 계산한다. .gitattributes에서 vendored/generated로
+// 표시한 폴더는 GitHub도 빼고 세므로 똑같이 뺀다.
+var codeVendoredPrefixes = []string{
+	"services/nsfw-service/runtime/",
+	"services/c-image-service/tools/",
+	"static/js/dist/",
+}
+
+var codeLangByExt = map[string][2]string{
+	".go": {"Go", "#00ADD8"}, ".html": {"HTML", "#e34c26"}, ".htm": {"HTML", "#e34c26"},
+	".js": {"JavaScript", "#f1e05a"}, ".mjs": {"JavaScript", "#f1e05a"}, ".ts": {"TypeScript", "#3178c6"},
+	".css": {"CSS", "#663399"}, ".rs": {"Rust", "#dea584"}, ".py": {"Python", "#3572A5"},
+	".bat": {"Batchfile", "#C1F12E"}, ".cmd": {"Batchfile", "#C1F12E"}, ".ps1": {"PowerShell", "#012456"},
+	".zig": {"Zig", "#ec915c"}, ".sh": {"Shell", "#89e051"}, ".c": {"C", "#555555"}, ".h": {"C", "#555555"},
+	".java": {"Java", "#b07219"}, ".sql": {"SQL", "#e38c00"},
+}
+
+func codeLanguages(entries []codeEntry) []codeLang {
+	sums := map[string]*codeLang{}
+	var total int64
+next:
+	for _, e := range entries {
+		if e.Kind != "file" {
+			continue
+		}
+		for _, pre := range codeVendoredPrefixes {
+			if strings.HasPrefix(e.Path, pre) {
+				continue next
+			}
+		}
+		info, ok := codeLangByExt[strings.ToLower(path.Ext(e.Path))]
+		if !ok {
+			continue
+		}
+		l := sums[info[0]]
+		if l == nil {
+			l = &codeLang{Name: info[0], Color: info[1]}
+			sums[info[0]] = l
+		}
+		l.Bytes += e.Size
+		total += e.Size
+	}
+	out := make([]codeLang, 0, len(sums))
+	for _, l := range sums {
+		if total > 0 {
+			l.Percent = float64(l.Bytes) * 100 / float64(total)
+		}
+		out = append(out, *l)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Bytes > out[j].Bytes })
+	return out
 }

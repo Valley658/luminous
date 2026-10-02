@@ -66,6 +66,18 @@ http {
         keepalive 64;
     }
 
+    map $uri $static_cc_unversioned {
+        ~^/static/uploads/  "no-cache";
+        ~*\.(?:webp|png|jpe?g|gif|avif|svg|ico|woff2?|ttf|otf|mp3|m4a|ogg|wav)$  "public, max-age=86400";
+        default  "no-cache";
+    }
+
+    # [2026-10-02] versioned_static()이 붙이는 ?v=<해시> 요청은 내용이 안 바뀌므로 1년 캐시(Cloudflare도 저장)
+    map $arg_v $static_cache_control {
+        ""       $static_cc_unversioned;
+        default  "public, max-age=31536000, immutable";
+    }
+
     map $http_upgrade $connection_upgrade {
         default upgrade;
         ''      close;
@@ -112,7 +124,7 @@ http {
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()" always;
-        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.youtube.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https://i.ytimg.com https://encrypted-tbn0.gstatic.com https://lh3.googleusercontent.com https://www.gravatar.com; media-src 'self' blob:; frame-src 'self' https://www.youtube.com https://drive.google.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri /api/csp-report;" always;
+        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.youtube.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https://*.ytimg.com https://img.youtube.com https://encrypted-tbn0.gstatic.com https://lh3.googleusercontent.com https://www.gravatar.com https://pbs.twimg.com https://i.namu.wiki https://github.com https://avatars.githubusercontent.com; media-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com https://chzzk.naver.com; connect-src 'self' https://*.ytimg.com https://cloudflareinsights.com https://static.cloudflareinsights.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri /api/csp-report;" always;
 
         access_log  C:/nginx/logs/timing.log  timing;
 
@@ -143,7 +155,7 @@ http {
         location /static/ {
             alias __STATIC_DIR__/;
             access_log off;
-            add_header Cache-Control "no-cache" always;
+            add_header Cache-Control $static_cache_control always;
         }
 
         # [2026-10-01] fanart images: file names are unique per upload and never change,
@@ -157,7 +169,7 @@ http {
 
         location ~* ^/static/(.+)\.webp$ {
             add_header Vary Accept always;
-            add_header Cache-Control "no-cache" always;
+            add_header Cache-Control "private, max-age=86400" always;
             access_log off;
             try_files $avif_candidate $uri =404;
         }
@@ -237,7 +249,7 @@ http {
         location /static/ {
             alias __STATIC_DIR__/;
             access_log off;
-            add_header Cache-Control "no-cache" always;
+            add_header Cache-Control $static_cache_control always;
         }
 
         location / {
@@ -272,7 +284,7 @@ http {
         location /static/ {
             alias __STATIC_DIR__/;
             access_log off;
-            add_header Cache-Control "no-cache" always;
+            add_header Cache-Control $static_cache_control always;
         }
 
         location / {
@@ -323,7 +335,7 @@ http {
         location /static/ {
             alias __STATIC_DIR__/;
             access_log off;
-            add_header Cache-Control "no-cache" always;
+            add_header Cache-Control $static_cache_control always;
         }
 
         location / {

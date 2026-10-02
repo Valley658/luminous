@@ -36,8 +36,8 @@ backups/
 # frontend build tooling
 # =========================================================
 # [2026-10-02] 원본 JS는 frontend/js/ 에만 두고 git에 올리지 않는다.
-# static/js/*.js 는 tools/build-obfuscated-js.js 가 만든 난독화 결과물이고,
-# 사이트도 GitHub도 이 난독화 파일만 공개한다. (scripts\JS빌드.bat)
+# static/js/*.js 는 tools/build-js.js 가 만든 압축(minify) 결과물이고,
+# 사이트도 GitHub도 이 압축 파일만 공개한다. (scripts\JS빌드.bat)
 frontend/
 # ...and their cache-busted-by-filename variants, if anything ever writes one
 # again (found 2026-09-08: static/js/m.<hash>.js / watch.<hash>.js had leaked
