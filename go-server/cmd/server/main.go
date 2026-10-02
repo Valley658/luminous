@@ -355,6 +355,10 @@ func main() {
 	r.Get("/privacy", app.PrivacyPolicyHandler)
 	r.Get("/terms", app.TermsOfServiceHandler)
 	r.Get("/credits", app.CreditsPageHandler)
+	r.Get("/code", app.CodePageHandler)
+	r.Get("/api/code/tree", app.ApiCodeTreeHandler)
+	r.Get("/api/code/file", app.ApiCodeFileHandler)
+	r.Get("/api/code/raw", app.ApiCodeRawHandler)
 	r.NotFound(app.NotFoundHandler) // 없는 주소 → 길 잃은 문어 404 페이지 (credits.go)
 	r.Get("/api/live_status", app.ApiLiveStatusHandler)
 

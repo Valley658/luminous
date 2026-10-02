@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{{ url_for('static', filename='logo/logo.webp') }}" type="image/webp">
+    <title>코드 둘러보기 - 루미너스</title>
+    <meta name="description" content="루미너스 사이트의 소스 코드를 GitHub와 같은 폴더 구조로 바로 둘러볼 수 있어요.">
+    <link rel="canonical" href="https://pastellive.co.kr/code">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="{{ versioned_static('css/policy.css') }}">
+    <style>
+        :root { --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Consolas, "D2Coding", monospace; }
+        body { line-height: 1.6; word-break: normal; }
+        .pc-top-inner, .cb-wrap { max-width: 1400px; }
+        .cb-wrap { margin: 0 auto; padding: 18px 20px 40px; }
+        .cb-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; }
+        .cb-head h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -.4px; display: flex; align-items: center; gap: 10px; }
+        .cb-head h1 i { color: var(--pc-accent); }
+        .cb-commit { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 320px; font-size: 13px; color: var(--pc-sub);
+            background: var(--pc-surface); border: 1px solid var(--pc-line); border-radius: 12px; padding: 8px 12px; }
+        .cb-commit code { font-family: var(--mono); color: var(--pc-accent); text-decoration: none; }
+        .cb-commit .msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--pc-text); min-width: 0; }
+        .cb-commit .when { margin-left: auto; white-space: nowrap; color: var(--pc-faint); }
+        .cb-btn { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+            font: inherit; font-size: 13px; font-weight: 700; border: 1px solid var(--pc-line); color: var(--pc-text); background: var(--pc-surface-2); text-decoration: none; }
+        .cb-btn:hover { border-color: var(--pc-accent); color: var(--pc-accent); }
+
+        .cb-main { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+        .cb-side { position: sticky; top: 70px; background: var(--pc-surface); border: 1px solid var(--pc-line); border-radius: 14px;
+            display: flex; flex-direction: column; max-height: calc(100vh - 90px); overflow: hidden; }
+        .cb-search { padding: 10px; border-bottom: 1px solid var(--pc-line); }
+        .cb-search input { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; color: var(--pc-text); background: var(--pc-bg);
+            border: 1px solid var(--pc-line); border-radius: 9px; padding: 7px 10px; }
+        .cb-search input:focus { outline: none; border-color: var(--pc-accent); }
+        .cb-tree { position: relative; overflow: auto; padding: 6px 4px 10px; font-size: 13px; }
+        .cb-node { display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 7px; cursor: pointer; color: var(--pc-sub);
+            white-space: nowrap; text-decoration: none; user-select: none; }
+        .cb-node:hover { background: var(--pc-surface-2); color: var(--pc-text); }
+        .cb-node.on { background: rgba(56,189,248,.14); color: var(--pc-accent); font-weight: 700; }
+        .cb-node i { width: 14px; text-align: center; font-size: 12px; flex: none; }
+        .cb-node .fa-folder, .cb-node .fa-folder-open { color: #7dd3fc; }
+        .cb-node .car { width: 10px; font-size: 9px; color: var(--pc-faint); transition: transform .12s; }
+        .cb-node.open .car { transform: rotate(90deg); }
+        .cb-node span { overflow: hidden; text-overflow: ellipsis; }
+        .cb-kids { display: none; }
+        .cb-kids.open { display: block; }
+        .cb-hit em { font-style: normal; color: var(--pc-accent); }
+
+        .cb-view { min-width: 0; }
+        .cb-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; font-size: 15px; margin: 2px 0 12px; font-weight: 700; }
+        .cb-crumbs a { color: var(--pc-accent); text-decoration: none; padding: 1px 3px; border-radius: 5px; }
+        .cb-crumbs a:hover { background: var(--pc-surface-2); }
+        .cb-crumbs .sep { color: var(--pc-faint); padding: 0 2px; font-weight: 400; }
+        .cb-crumbs .cur { color: var(--pc-text); padding: 1px 3px; }
+        .cb-card { background: var(--pc-surface); border: 1px solid var(--pc-line); border-radius: 14px; overflow: hidden; }
+        .cb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--pc-line);
+            background: var(--pc-surface-2); font-size: 12.5px; color: var(--pc-sub); }
+        .cb-bar .grow { flex: 1; }
+        .cb-bar .cb-btn { padding: 5px 11px; font-size: 12px; }
+        .cb-seg { display: inline-flex; border: 1px solid var(--pc-line); border-radius: 999px; overflow: hidden; }
+        .cb-seg button { font: inherit; font-size: 12px; font-weight: 700; padding: 5px 12px; border: 0; background: transparent; color: var(--pc-sub); cursor: pointer; white-space: nowrap; }
+        .cb-seg button.on { background: var(--pc-accent); color: #0b0d12; }
+
+        .cb-list { list-style: none; margin: 0; padding: 0; }
+        .cb-list li a { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--pc-line);
+            color: var(--pc-text); text-decoration: none; font-size: 14px; }
+        .cb-list li:first-child a { border-top: 0; }
+        .cb-list li a:hover { background: var(--pc-surface-2); color: var(--pc-accent); }
+        .cb-list i { width: 16px; text-align: center; color: var(--pc-faint); }
+        .cb-list .fa-folder { color: #7dd3fc; }
+        .cb-list .sz { margin-left: auto; color: var(--pc-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+        .cb-code { overflow: auto; max-height: 78vh; background: #0d1117; }
+        .cb-code table { border-collapse: collapse; font-family: var(--mono); font-size: 12.8px; line-height: 1.55; tab-size: 4; width: 100%; }
+        .cb-code td { padding: 0 14px; vertical-align: top; }
+        .cb-code td.ln { width: 1%; min-width: 40px; text-align: right; color: #4b5468; user-select: none; padding-right: 10px; border-right: 1px solid #1d2330; cursor: pointer; white-space: nowrap; }
+        .cb-code td.ln:hover { color: var(--pc-accent); }
+        .cb-code td.lc { white-space: pre; color: #e6edf3; }
+        .cb-code tr.hl td { background: rgba(56,189,248,.12); }
+        .cb-code tr.hl td.ln { color: var(--pc-accent); }
+        .cb-code .hljs { background: transparent; padding: 0; }
+
+        .cb-md { padding: 22px 28px; line-height: 1.75; font-size: 15px; overflow-wrap: anywhere; }
+        .cb-md h1, .cb-md h2 { border-bottom: 1px solid var(--pc-line); padding-bottom: .3em; }
+        .cb-md code { font-family: var(--mono); font-size: .88em; background: var(--pc-surface-2); padding: .15em .4em; border-radius: 6px; }
+        .cb-md pre { background: #0d1117; border: 1px solid var(--pc-line); border-radius: 10px; padding: 14px; overflow: auto; }
+        .cb-md pre code { background: none; padding: 0; }
+        .cb-md table { border-collapse: collapse; display: block; overflow: auto; }
+        .cb-md th, .cb-md td { border: 1px solid var(--pc-line); padding: 6px 12px; }
+        .cb-md img { max-width: 100%; }
+        .cb-md blockquote { margin: 0; padding: 0 1em; color: var(--pc-sub); border-left: 4px solid var(--pc-line); }
+
+        .cb-note { padding: 40px 20px; text-align: center; color: var(--pc-sub); font-size: 14px; }
+        .cb-note i { display: block; font-size: 30px; color: var(--pc-faint); margin-bottom: 12px; }
+        .cb-note pre { text-align: left; display: inline-block; font-family: var(--mono); font-size: 12px; background: var(--pc-bg); padding: 12px; border-radius: 10px; color: var(--pc-faint); }
+        .cb-img { padding: 24px; text-align: center; background: repeating-conic-gradient(#151922 0% 25%, #10131a 0% 50%) 50% / 20px 20px; }
+        .cb-img img { max-width: 100%; max-height: 70vh; }
+        .cb-readme { margin-top: 16px; }
+        .cb-skel { height: 14px; margin: 10px 14px; border-radius: 6px; background: linear-gradient(90deg, var(--pc-surface-2), #222838, var(--pc-surface-2)); background-size: 200% 100%; animation: cbSk 1.2s infinite; }
+        @keyframes cbSk { to { background-position: -200% 0; } }
+        @media (prefers-reduced-motion: reduce) { .cb-skel { animation: none; } }
+
+        .cb-toggle { display: none; }
+        @media (max-width: 860px) {
+            .cb-main { grid-template-columns: 1fr; }
+            .cb-side { position: static; max-height: 55vh; display: none; }
+            .cb-side.show { display: flex; }
+            .cb-toggle { display: inline-flex; }
+            .cb-md { padding: 16px; }
+            .cb-commit .when { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header class="pc-top">
+        <div class="pc-top-inner">
+            <a class="pc-brand" href="/"><img src="{{ url_for('static', filename='logo/logo.webp') }}" alt=""><span>루미너스</span></a>
+            <nav class="pc-tabs" aria-label="안내"><a href="/updates">업데이트</a><a href="/code" class="on" aria-current="page">코드</a><a href="/credits">크레딧</a></nav>
+        </div>
+    </header>
+
+    <div class="cb-wrap">
+        <div class="cb-head">
+            <h1><i class="fas fa-code"></i> 루미너스 코드</h1>
+            <div class="cb-commit" id="cbCommit"><i class="fas fa-code-commit"></i><span class="msg">불러오는 중…</span></div>
+            <button class="cb-btn cb-toggle" id="cbToggle" type="button"><i class="fas fa-folder-tree"></i> 파일 목록</button>
+            <a class="cb-btn" id="cbGithub" href="{{ github_url }}" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub에서 보기</a>
+        </div>
+
+        <div class="cb-main">
+            <aside class="cb-side" id="cbSide" aria-label="파일 목록">
+                <div class="cb-search"><input id="cbFilter" type="search" placeholder="파일 이름으로 찾기" autocomplete="off" aria-label="파일 이름으로 찾기"></div>
+                <div class="cb-tree" id="cbTree" role="tree"><div class="cb-skel"></div><div class="cb-skel"></div><div class="cb-skel"></div></div>
+            </aside>
+            <main class="cb-view">
+                <nav class="cb-crumbs" id="cbCrumbs" aria-label="현재 위치"></nav>
+                <div id="cbBody"><div class="cb-card"><div class="cb-skel"></div><div class="cb-skel"></div><div class="cb-skel"></div></div></div>
+            </main>
+        </div>
+    </div>
+
+    <footer class="pc-foot">
+        <div class="pc-foot-inner">
+            <span>루미너스 · 스텔라이브 비공식 팬 사이트</span>
+            <a href="/">홈</a><a href="/updates">업데이트 로그</a><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><a href="/credits">크레딧</a>
+            <a href="{{ github_url }}" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        var GH = document.getElementById('cbGithub').getAttribute('href');
+        var $tree = document.getElementById('cbTree'), $body = document.getElementById('cbBody'),
+            $crumbs = document.getElementById('cbCrumbs'), $filter = document.getElementById('cbFilter');
+        var root = null, files = {}, commit = '', current = null;
+
+        function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+        function size(n) { if (n < 1024) return n + ' B'; if (n < 1048576) return (n / 1024).toFixed(1) + ' KB'; return (n / 1048576).toFixed(1) + ' MB'; }
+        function enc(p) { return encodeURIComponent(p).replace(/%2F/g, '/'); }
+        function codeUrl(p) { return p ? '/code?path=' + enc(p) : '/code'; }
+        function ghUrl(p, isDir) { return GH + (p ? '/' + (isDir ? 'tree' : 'blob') + '/' + (commit || 'master') + '/' + enc(p) : ''); }
+        function ago(iso) {
+            var d = new Date(iso); if (isNaN(d)) return '';
+            var s = (Date.now() - d) / 1000;
+            if (s < 60) return '방금 전'; if (s < 3600) return Math.floor(s / 60) + '분 전';
+            if (s < 86400) return Math.floor(s / 3600) + '시간 전'; if (s < 2592000) return Math.floor(s / 86400) + '일 전';
+            return d.toLocaleDateString('ko-KR');
+        }
+        var ICONS = { go: 'fas fa-file-code', js: 'fa-brands fa-js', ts: 'fa-brands fa-js', html: 'fa-brands fa-html5', css: 'fa-brands fa-css3-alt',
+            md: 'fa-brands fa-markdown', py: 'fa-brands fa-python', rs: 'fas fa-file-code', json: 'fas fa-file-code', bat: 'fas fa-terminal',
+            ps1: 'fas fa-terminal', png: 'fas fa-file-image', jpg: 'fas fa-file-image', jpeg: 'fas fa-file-image', webp: 'fas fa-file-image',
+            gif: 'fas fa-file-image', svg: 'fas fa-file-image', ico: 'fas fa-file-image', mp3: 'fas fa-file-audio', m4a: 'fas fa-file-audio',
+            exe: 'fas fa-gear', dll: 'fas fa-gear', zip: 'fas fa-file-zipper', woff2: 'fas fa-font', ttf: 'fas fa-font' };
+        function ext(p) { var m = /\.([^./]+)$/.exec(p); return m ? m[1].toLowerCase() : ''; }
+        function icon(name) { return ICONS[ext(name)] || 'far fa-file'; }
+        var LANG = { go: 'go', js: 'javascript', mjs: 'javascript', ts: 'typescript', html: 'xml', xml: 'xml', svg: 'xml', css: 'css',
+            json: 'json', md: 'markdown', py: 'python', rs: 'rust', zig: 'zig', bat: 'dos', cmd: 'dos', ps1: 'powershell', sh: 'bash',
+            yml: 'yaml', yaml: 'yaml', toml: 'ini', ini: 'ini', sql: 'sql', conf: 'nginx', template: 'nginx', mod: 'go', sum: 'plaintext' };
+
+        // ---------- 트리 만들기 ----------
+        function build(list) {
+            var r = { name: '', path: '', dirs: {}, files: [] };
+            list.forEach(function (f) {
+                var parts = f.path.split('/'), node = r;
+                for (var i = 0; i < parts.length - 1; i++) {
+                    var p = parts.slice(0, i + 1).join('/');
+                    node = node.dirs[parts[i]] || (node.dirs[parts[i]] = { name: parts[i], path: p, dirs: {}, files: [] });
+                }
+                node.files.push({ name: parts[parts.length - 1], path: f.path, size: f.size, kind: f.kind });
+                files[f.path] = f;
+            });
+            return r;
+        }
+        function sortedDirs(n) { return Object.keys(n.dirs).sort(function (a, b) { return a.localeCompare(b); }).map(function (k) { return n.dirs[k]; }); }
+        function sortedFiles(n) { return n.files.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }); }
+        function findDir(p) {
+            if (!p) return root;
+            var n = root, parts = p.split('/');
+            for (var i = 0; i < parts.length; i++) { n = n.dirs[parts[i]]; if (!n) return null; }
+            return n;
+        }
+
+        function renderTreeLevel(node, depth, host) {
+            var frag = document.createDocumentFragment();
+            sortedDirs(node).forEach(function (d) {
+                var row = document.createElement('a');
+                row.className = 'cb-node'; row.href = codeUrl(d.path); row.dataset.dir = d.path; row.setAttribute('role', 'treeitem');
+                row.style.paddingLeft = (8 + depth * 14) + 'px';
+                row.innerHTML = '<i class="fas fa-chevron-right car"></i><i class="fas fa-folder"></i><span>' + esc(d.name) + '</span>';
+                var kids = document.createElement('div'); kids.className = 'cb-kids'; kids.dataset.for = d.path;
+                frag.appendChild(row); frag.appendChild(kids);
+            });
+            sortedFiles(node).forEach(function (f) {
+                var row = document.createElement('a');
+                row.className = 'cb-node'; row.href = codeUrl(f.path); row.dataset.file = f.path; row.setAttribute('role', 'treeitem');
+                row.style.paddingLeft = (8 + depth * 14 + 16) + 'px';
+                row.innerHTML = '<i class="' + icon(f.name) + '"></i><span>' + esc(f.name) + '</span>';
+                frag.appendChild(row);
+            });
+            host.appendChild(frag);
+        }
+        function openDir(p, open) {
+            var row = $tree.querySelector('.cb-node[data-dir="' + CSS.escape(p) + '"]');
+            var kids = $tree.querySelector('.cb-kids[data-for="' + CSS.escape(p) + '"]');
+            if (!row || !kids) return;
+            if (open && !kids.dataset.done) { renderTreeLevel(findDir(p), p.split('/').length, kids); kids.dataset.done = '1'; }
+            kids.classList.toggle('open', open); row.classList.toggle('open', open);
+            var ic = row.querySelector('.fa-folder, .fa-folder-open');
+            if (ic) ic.className = 'fas ' + (open ? 'fa-folder-open' : 'fa-folder');
+        }
+        function revealInTree(p) {
+            var parts = p.split('/'), acc = [];
+            var isDir = !!findDir(p) && !files[p];
+            var upto = isDir ? parts.length : parts.length - 1;
+            for (var i = 0; i < upto; i++) { acc.push(parts[i]); openDir(acc.join('/'), true); }
+            $tree.querySelectorAll('.cb-node.on').forEach(function (n) { n.classList.remove('on'); });
+            var sel = $tree.querySelector(isDir ? '.cb-node[data-dir="' + CSS.escape(p) + '"]' : '.cb-node[data-file="' + CSS.escape(p) + '"]');
+            if (sel) { sel.classList.add('on'); if (sel.offsetTop < $tree.scrollTop || sel.offsetTop > $tree.scrollTop + $tree.clientHeight - 30) $tree.scrollTop = Math.max(0, sel.offsetTop - $tree.clientHeight / 2); }
+        }
+
+        $tree.addEventListener('click', function (e) {
+            var a = e.target.closest('.cb-node'); if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+            e.preventDefault();
+            if (a.dataset.dir !== undefined && !$filter.value) {
+                var isOpen = a.classList.contains('open');
+                if (isOpen && current === a.dataset.dir) { openDir(a.dataset.dir, false); return; }
+                openDir(a.dataset.dir, true);
+                go(a.dataset.dir);
+            } else {
+                go(a.dataset.file || a.dataset.dir);
+                document.getElementById('cbSide').classList.remove('show');
+            }
+        });
+
+        // ---------- 파일 이름 찾기 ----------
+        var filterTimer;
+        $filter.addEventListener('input', function () {
+            clearTimeout(filterTimer);
+            filterTimer = setTimeout(function () {
+                var q = $filter.value.trim().toLowerCase();
+                $tree.innerHTML = '';
+                if (!q) { renderTreeLevel(root, 0, $tree); if (current) revealInTree(current); return; }
+                var hits = Object.keys(files).filter(function (p) { return p.toLowerCase().indexOf(q) >= 0; }).slice(0, 300);
+                if (!hits.length) { $tree.innerHTML = '<div class="cb-note" style="padding:20px">찾는 파일이 없어요.</div>'; return; }
+                hits.forEach(function (p) {
+                    var i = p.toLowerCase().indexOf(q);
+                    var a = document.createElement('a');
+                    a.className = 'cb-node cb-hit'; a.href = codeUrl(p); a.dataset.file = p; a.title = p;
+                    a.innerHTML = '<i class="' + icon(p) + '"></i><span>' + esc(p.slice(0, i)) + '<em>' + esc(p.slice(i, i + q.length)) + '</em>' + esc(p.slice(i + q.length)) + '</span>';
+                    $tree.appendChild(a);
+                });
+            }, 120);
+        });
+
+        // ---------- 오른쪽 화면 ----------
+        function crumbs(p) {
+            var html = '<a href="/code" data-go="">luminous</a>';
+            if (p) {
+                var parts = p.split('/'), acc = [];
+                parts.forEach(function (part, i) {
+                    acc.push(part);
+                    html += '<span class="sep">/</span>';
+                    html += i === parts.length - 1 ? '<span class="cur">' + esc(part) + '</span>'
+                        : '<a href="' + codeUrl(acc.join('/')) + '" data-go="' + esc(acc.join('/')) + '">' + esc(part) + '</a>';
+                });
+            }
+            $crumbs.innerHTML = html;
+        }
+        $crumbs.addEventListener('click', function (e) {
+            var a = e.target.closest('a[data-go]'); if (!a || e.ctrlKey || e.metaKey) return;
+            e.preventDefault(); go(a.dataset.go);
+        });
+
+        function showDir(p) {
+            var d = findDir(p);
+            var rows = sortedDirs(d).map(function (x) {
+                return '<li><a href="' + codeUrl(x.path) + '" data-go="' + esc(x.path) + '"><i class="fas fa-folder"></i>' + esc(x.name) + '</a></li>';
+            }).concat(sortedFiles(d).map(function (f) {
+                return '<li><a href="' + codeUrl(f.path) + '" data-go="' + esc(f.path) + '"><i class="' + icon(f.name) + '"></i>' + esc(f.name) + '<span class="sz">' + size(f.size) + '</span></a></li>';
+            }));
+            var up = p ? '<li><a href="' + codeUrl(p.split('/').slice(0, -1).join('/')) + '" data-go="' + esc(p.split('/').slice(0, -1).join('/')) + '"><i class="fas fa-turn-up"></i>..</a></li>' : '';
+            $body.innerHTML = '<div class="cb-card"><div class="cb-bar"><i class="fas fa-folder-open"></i> 폴더 ' + sortedDirs(d).length + '개 · 파일 ' + d.files.length + '개<span class="grow"></span>' +
+                '<a class="cb-btn" href="' + ghUrl(p, true) + '" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></div><ul class="cb-list">' + up + rows.join('') + '</ul></div>';
+            var readme = d.files.filter(function (f) { return /^readme(\.md|\.markdown|\.txt)?$/i.test(f.name); })[0];
+            if (readme) {
+                var box = document.createElement('div'); box.className = 'cb-card cb-readme';
+                box.innerHTML = '<div class="cb-bar"><i class="fas fa-book-open"></i> ' + esc(readme.name) + '</div><div class="cb-skel"></div>';
+                $body.appendChild(box);
+                fetchFile(readme.path).then(function (r) {
+                    if (current !== p) return;
+                    box.innerHTML = '<div class="cb-bar"><i class="fas fa-book-open"></i> ' + esc(readme.name) + '</div>' +
+                        (/\.(md|markdown)$/i.test(readme.name) ? '<div class="cb-md">' + md(r.content || '', readme.path) + '</div>' : codeTable(r.content || '', 'plaintext'));
+                }).catch(function () { box.remove(); });
+            }
+        }
+        $body.addEventListener('click', function (e) {
+            var a = e.target.closest('a[data-go]'); if (!a || e.ctrlKey || e.metaKey) return;
+            e.preventDefault(); go(a.dataset.go);
+        });
+
+        var cache = {};
+        function fetchFile(p) {
+            if (cache[p]) return Promise.resolve(cache[p]);
+            return fetch('/api/code/file?path=' + encodeURIComponent(p)).then(function (r) { return r.json(); }).then(function (j) {
+                if (!j.success) throw new Error(j.message || '불러오지 못했어요.');
+                cache[p] = j; return j;
+            });
+        }
+
+        function codeTable(text, lang) {
+            var html;
+            if (text.length < 300000 && window.hljs && lang && lang !== 'plaintext' && hljs.getLanguage(lang)) {
+                try { html = hljs.highlight(text, { language: lang, ignoreIllegals: true }).value; } catch (e) { html = esc(text); }
+            } else html = esc(text);
+            // 줄 단위로 나누되, 여러 줄에 걸친 하이라이트 span이 끊기지 않게 줄마다 열린 태그를 다시 열어 준다
+            var lines = html.split('\n'), open = [], out = [];
+            if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+            lines.forEach(function (ln, i) {
+                var prefix = open.join('');
+                var re = /<span[^>]*>|<\/span>/g, m;
+                while ((m = re.exec(ln))) { if (m[0] === '</span>') open.pop(); else open.push(m[0]); }
+                out.push('<tr id="LC' + (i + 1) + '"><td class="ln" data-ln="' + (i + 1) + '">' + (i + 1) + '</td><td class="lc">' + prefix + ln + '</span>'.repeat(open.length) + '</td></tr>');
+            });
+            return '<div class="cb-code"><table class="hljs"><tbody>' + out.join('') + '</tbody></table></div>';
+        }
+
+        function resolveRel(base, href) {
+            var dir = base.split('/').slice(0, -1);
+            href.split('/').forEach(function (s) { if (s === '..') dir.pop(); else if (s && s !== '.') dir.push(s); });
+            return dir.join('/');
+        }
+        function md(text, base) {
+            if (!window.marked || !window.DOMPurify) return '<pre>' + esc(text) + '</pre>';
+            var html = DOMPurify.sanitize(marked.parse(text, { gfm: true }));
+            var tmp = document.createElement('div'); tmp.innerHTML = html;
+            tmp.querySelectorAll('a[href]').forEach(function (a) {
+                var h = a.getAttribute('href');
+                if (/^(https?:|mailto:)/i.test(h)) { a.target = '_blank'; a.rel = 'noopener'; return; }
+                if (h.charAt(0) === '#') return;
+                var p = resolveRel(base, h.split('#')[0]);
+                a.href = codeUrl(p); a.setAttribute('data-go', p);
+            });
+            tmp.querySelectorAll('img[src]').forEach(function (img) {
+                var s = img.getAttribute('src');
+                if (!/^(https?:|data:)/i.test(s)) img.src = '/api/code/raw?path=' + encodeURIComponent(resolveRel(base, s));
+            });
+            tmp.querySelectorAll('pre code').forEach(function (c) { if (window.hljs) try { hljs.highlightElement(c); } catch (e) {} });
+            return tmp.innerHTML;
+        }
+
+        function showFile(p) {
+            var f = files[p];
+            var bar = function (extra) {
+                return '<div class="cb-bar"><i class="' + icon(p) + '"></i> ' + size(f.size) + (extra || '') + '<span class="grow"></span>' +
+                    '<span id="cbTools"></span><a class="cb-btn" href="' + ghUrl(p) + '" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></div>';
+            };
+            $body.innerHTML = '<div class="cb-card">' + bar() + '<div class="cb-skel"></div><div class="cb-skel"></div></div>';
+            fetchFile(p).then(function (r) {
+                if (current !== p) return;
+                var card = '<div class="cb-card">';
+                if (r.image) {
+                    $body.innerHTML = card + bar() + '<div class="cb-img"><img src="/api/code/raw?path=' + encodeURIComponent(p) + '" alt="' + esc(p) + '"></div></div>';
+                } else if (r.too_large) {
+                    $body.innerHTML = card + bar() + '<div class="cb-note"><i class="fas fa-weight-hanging"></i>파일이 너무 커서(' + size(r.size) + ') 여기서는 보여드릴 수 없어요.<br>GitHub에서 확인해 주세요.</div></div>';
+                } else if (r.lfs) {
+                    $body.innerHTML = card + bar(' · Git LFS') + '<div class="cb-note"><i class="fas fa-box-archive"></i>큰 파일이라 Git LFS로 따로 저장돼 있어요. 저장소에는 아래 정보만 들어 있어요.<br><br><pre>' + esc(r.content) + '</pre></div></div>';
+                } else if (r.binary) {
+                    $body.innerHTML = card + bar() + '<div class="cb-note"><i class="fas fa-file"></i>글자로 볼 수 없는 파일(바이너리)이에요.</div></div>';
+                } else if (r.kind === 'submodule') {
+                    $body.innerHTML = card + bar() + '<div class="cb-note"><i class="fas fa-cube"></i>다른 저장소를 연결해 둔 폴더(서브모듈)예요.</div></div>';
+                } else {
+                    var text = r.content || '', lines = text ? text.split('\n').length - (/\n$/.test(text) ? 1 : 0) : 0;
+                    var isMd = /\.(md|markdown)$/i.test(p);
+                    $body.innerHTML = card + bar(' · ' + lines.toLocaleString() + '줄') + '<div id="cbContent"></div></div>';
+                    var tools = document.getElementById('cbTools'), content = document.getElementById('cbContent');
+                    var mode = isMd ? 'preview' : 'code';
+                    var paint = function () {
+                        content.innerHTML = mode === 'preview' ? '<div class="cb-md">' + md(text, p) + '</div>' : codeTable(text, LANG[ext(p)] || 'plaintext');
+                        if (mode === 'code') highlightHash();
+                    };
+                    tools.innerHTML = (isMd ? '<span class="cb-seg"><button type="button" data-m="preview">미리보기</button><button type="button" data-m="code">코드</button></span> ' : '') +
+                        '<button class="cb-btn" type="button" id="cbCopy"><i class="far fa-copy"></i> 복사</button>';
+                    var seg = function () { tools.querySelectorAll('[data-m]').forEach(function (b) { b.classList.toggle('on', b.dataset.m === mode); }); };
+                    tools.addEventListener('click', function (e) {
+                        var b = e.target.closest('[data-m]');
+                        if (b) { mode = b.dataset.m; seg(); paint(); return; }
+                        if (e.target.closest('#cbCopy')) {
+                            navigator.clipboard.writeText(text).then(function () {
+                                var c = document.getElementById('cbCopy'); c.innerHTML = '<i class="fas fa-check"></i> 복사됨';
+                                setTimeout(function () { c.innerHTML = '<i class="far fa-copy"></i> 복사'; }, 1500);
+                            });
+                        }
+                    });
+                    seg(); paint();
+                }
+            }).catch(function (err) {
+                if (current !== p) return;
+                $body.innerHTML = '<div class="cb-card"><div class="cb-note"><i class="fas fa-triangle-exclamation"></i>' + esc(err.message) + '</div></div>';
+            });
+        }
+
+        // 줄 번호 누르면 그 줄 주소(#L12)로
+        function highlightHash() {
+            document.querySelectorAll('.cb-code tr.hl').forEach(function (r) { r.classList.remove('hl'); });
+            var m = /^#L(\d+)(?:-L?(\d+))?$/.exec(location.hash); if (!m) return;
+            var a = +m[1], b = +(m[2] || m[1]);
+            for (var i = Math.min(a, b); i <= Math.max(a, b); i++) { var tr = document.getElementById('LC' + i); if (tr) tr.classList.add('hl'); }
+            var first = document.getElementById('LC' + Math.min(a, b)), box = first && first.closest('.cb-code');
+            if (box) box.scrollTop = Math.max(0, first.offsetTop - box.clientHeight / 2);
+        }
+        $body.addEventListener('click', function (e) {
+            var td = e.target.closest('td.ln'); if (!td) return;
+            history.replaceState(null, '', location.pathname + location.search + '#L' + td.dataset.ln);
+            highlightHash();
+        });
+
+        function go(p, replace) {
+            p = p || '';
+            if (p && !files[p] && !findDir(p)) { p = ''; }
+            current = p;
+            var url = codeUrl(p);
+            if (replace) history.replaceState({ p: p }, '', url + location.hash);
+            else if (location.pathname + location.search !== url) history.pushState({ p: p }, '', url);
+            document.title = (p ? p.split('/').pop() + ' · ' : '') + '코드 둘러보기 - 루미너스';
+            crumbs(p);
+            if (!$filter.value) revealInTree(p);
+            if (files[p]) showFile(p); else showDir(p);
+            if (!replace) window.scrollTo(0, 0);
+        }
+        window.addEventListener('popstate', function () { go(new URLSearchParams(location.search).get('path') || '', true); });
+
+        document.getElementById('cbToggle').addEventListener('click', function () { document.getElementById('cbSide').classList.toggle('show'); });
+
+        fetch('/api/code/tree').then(function (r) { return r.json(); }).then(function (j) {
+            if (!j.success) throw new Error(j.message);
+            commit = j.commit;
+            root = build(j.files);
+            var c = document.getElementById('cbCommit');
+            c.innerHTML = '<i class="fas fa-code-commit"></i><a href="' + GH + '/commit/' + esc(j.commit) + '" target="_blank" rel="noopener"><code>' + esc(j.commit.slice(0, 7)) + '</code></a>' +
+                '<span class="msg" title="' + esc(j.message || '') + '">' + esc(j.message || '') + '</span>' +
+                '<span class="when" title="' + esc(j.date || '') + '">' + ago(j.date) + ' · 파일 ' + j.files.length.toLocaleString() + '개</span>';
+            $tree.innerHTML = '';
+            renderTreeLevel(root, 0, $tree);
+            go(new URLSearchParams(location.search).get('path') || '', true);
+        }).catch(function (err) {
+            $tree.innerHTML = '';
+            document.getElementById('cbCommit').innerHTML = '<i class="fas fa-triangle-exclamation"></i><span class="msg">코드를 불러오지 못했어요</span>';
+            $body.innerHTML = '<div class="cb-card"><div class="cb-note"><i class="fas fa-plug"></i>' + esc(err.message || '지금은 코드를 불러올 수 없어요.') +
+                '<br><br><a class="cb-btn" href="' + GH + '" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub에서 보기</a></div></div>';
+        });
+    })();
+    </script>
+</body>
+</html>

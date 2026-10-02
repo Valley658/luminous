@@ -49,6 +49,27 @@ const OPTIONS = {
   sourceMap: false,
 };
 
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+// Windows에서는 nginx(open_file_cache)나 백신이 static/js 파일을 열어 둔 동안
+// rename으로 덮어쓰기가 EPERM/EBUSY로 막힐 수 있다(방문자가 많이 받는 script.js가 특히 그렇다).
+// 잠깐씩 기다리며 다시 시도하고, 끝까지 안 되면 파일 내용을 직접 덮어쓴다.
+function replaceFile(tmpPath, outPath, content) {
+  for (let i = 0; i < 10; i++) {
+    try {
+      fs.renameSync(tmpPath, outPath);
+      return;
+    } catch (e) {
+      if (!["EPERM", "EBUSY", "EACCES"].includes(e.code)) throw e;
+      sleep(300);
+    }
+  }
+  fs.writeFileSync(outPath, content, "utf8");
+  try { fs.unlinkSync(tmpPath); } catch (_) {}
+}
+
 function main() {
   let failed = 0;
   for (const name of FILES) {
@@ -66,7 +87,7 @@ function main() {
       const out = JavaScriptObfuscator.obfuscate(code, { ...OPTIONS, seed, identifiersPrefix }).getObfuscatedCode();
       const outPath = path.join(OUT_DIR, name);
       fs.writeFileSync(outPath + ".tmp", out, "utf8");
-      fs.renameSync(outPath + ".tmp", outPath);
+      replaceFile(outPath + ".tmp", outPath, out);
       console.log(`[ok] ${name}  ${code.length} -> ${out.length} bytes`);
     } catch (e) {
       failed++;
