@@ -1,6 +1,12 @@
 @echo off
 if /I "%~1"=="__UTF8RUN__" goto :main
 
+rem 서버 작업(PastelliveApp)을 멈추고 다시 켜려면 관리자 권한이 필요해서 자동으로 요청한다.
+net session >nul 2>&1
+if not "%errorlevel%"=="0" (
+    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    exit /b
+)
 chcp 65001 >nul
 cmd /d /c ""%~f0" __UTF8RUN__"
 exit /b
