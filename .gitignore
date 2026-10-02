@@ -35,12 +35,10 @@ backups/
 # =========================================================
 # frontend build tooling
 # =========================================================
-# static/js/*.js (script.js, watch.js, m.js) are the plain source the server
-# actually serves - kept out of git on purpose, see README.md "Frontend build"
-# section. Only the obfuscated build in static/js/dist/ is committed.
-static/js/script.js
-static/js/watch.js
-static/js/m.js
+# [2026-10-02] 원본 JS는 frontend/js/ 에만 두고 git에 올리지 않는다.
+# static/js/*.js 는 tools/build-obfuscated-js.js 가 만든 난독화 결과물이고,
+# 사이트도 GitHub도 이 난독화 파일만 공개한다. (scripts\JS빌드.bat)
+frontend/
 # ...and their cache-busted-by-filename variants, if anything ever writes one
 # again (found 2026-09-08: static/js/m.<hash>.js / watch.<hash>.js had leaked
 # into git as plain source - versioned_static() actually only appends a ?v=
@@ -50,6 +48,7 @@ static/js/script.*.js
 static/js/watch.*.js
 static/js/m.*.js
 static/js/node_modules/
+_xfer/
 
 # same hash-suffixed-cache-busting-filename leak, found in static/css (2026-09-08):
 # static/css/m.css, watch.css, style.css ARE meant to be committed (CSS isn't
@@ -200,3 +199,4 @@ _backup_*/
 # 멤버 공식 노래·사진(배경음용) - 저작권 있는 원본이라 공개 저장소에는 올리지 않음
 static/music/
 *.template.bak_*
+scripts/rdp_backup_*.reg
