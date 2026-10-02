@@ -200,3 +200,101 @@ _backup_*/
 static/music/
 *.template.bak_*
 scripts/rdp_backup_*.reg
+
+# =========================================================
+# DB 데이터/덤프 - 어디에 있든 절대 커밋 금지 (2026-10-02)
+# 운영 DB(MySQL 8.0 pastellive_db)의 내용이 덤프나 로컬 사본으로
+# 저장소에 섞여 들어가지 않게 확장자 기준으로 전부 막는다.
+# =========================================================
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sql
+*.sql.gz
+*.sql.zip
+*.dump
+*.ibd
+*.frm
+
+# =========================================================
+# 비밀키/인증서 - 절대 커밋 금지 (2026-10-02)
+# =========================================================
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.csr
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+credentials*.json
+client_secret*.json
+service-account*.json
+token.json
+*.secret
+.htpasswd
+
+# =========================================================
+# Go 빌드/테스트 부산물
+# =========================================================
+*.test
+*.prof
+*.pprof
+coverage.out
+coverage.html
+cover.out
+go.work
+go.work.sum
+
+# =========================================================
+# Node / Python 부산물
+# =========================================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.eslintcache
+*.tsbuildinfo
+.venv/
+venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+
+# =========================================================
+# 임시/백업/편집기 파일
+# =========================================================
+*.tmp
+*.temp
+*.bak
+*.bak_*
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+.idea/
+*.code-workspace
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+*.lnk
+
+# =========================================================
+# 압축/덤프/크래시 파일
+# =========================================================
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.dmp
+*.stackdump
+
+# 휴대용 파이썬 표준 라이브러리는 nsfw-service 실행에 필요 - *.zip 규칙 예외
+!services/nsfw-service/runtime/python/python311.zip
