@@ -1,0 +1,13 @@
+# 새 빌드(*.new)가 bin 폴더에 생기면 바로 scripts/watch_and_apply.sh 로 교체한다.
+# (예전 Windows의 PastelliveAutoDeploy 작업 + watch_and_apply.ps1 역할)
+[Unit]
+Description=Luminous auto-apply new builds
+
+[Path]
+PathExists=__APP_DIR__/go-server/bin/pastellive-server.new
+PathExists=__APP_DIR__/services/c-image-service/bin/pastellive-image-service.new
+PathExists=__APP_DIR__/services/phash-service/bin/pastellive-phash-service.new
+Unit=pastellive-autodeploy.service
+
+[Install]
+WantedBy=multi-user.target

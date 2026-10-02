@@ -45,10 +45,26 @@ jobs:
       - name: go build (native)
         run: go build -buildvcs=false ./...
 
-      - name: go build (windows/amd64 - matches production target)
-        run: GOOS=windows GOARCH=amd64 go build -buildvcs=false -o /tmp/ci-windows-build/ ./...
+      - name: go build (linux/amd64 static - matches production target)
+        run: GOOS=linux GOARCH=amd64 go build -buildvcs=false -trimpath -o /tmp/ci-linux-build/ ./...
         env:
           CGO_ENABLED: 0
 
       - name: go test
         run: go test -buildvcs=false ./...
+
+  shell:
+    name: Shell scripts (bash -n / shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: bash -n
+        run: |
+          find scripts deploy services -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - name: shellcheck
+        run: |
+          sudo apt-get install -y shellcheck >/dev/null
+          find scripts deploy services -name '*.sh' -print0 | xargs -0 shellcheck -S error

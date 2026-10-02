@@ -1,0 +1,10 @@
+# MySQL 자동 백업 (scripts/backup_db.sh) - pastellive-backup.timer 가 매일 실행
+[Unit]
+Description=Luminous MySQL backup
+After=mysql.service
+
+[Service]
+Type=oneshot
+User=__USER__
+Group=__GROUP__
+ExecStart=__APP_DIR__/scripts/backup_db.sh

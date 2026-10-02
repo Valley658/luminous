@@ -1,0 +1,18 @@
+# 팬아트 재업로드/도용 탐지 (Zig, phash-service, 포트 8096)
+[Unit]
+Description=Luminous phash service (:8096)
+After=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__APP_DIR__/services/phash-service/bin
+Environment=PHASH_SERVICE_PORT=8096
+ExecStart=__APP_DIR__/go-server/bin/watchdog -exe __APP_DIR__/services/phash-service/bin/pastellive-phash-service -log __APP_DIR__/services/phash-service/logs/service.log -health http://127.0.0.1:8096/health
+Restart=always
+RestartSec=3
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

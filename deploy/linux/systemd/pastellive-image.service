@@ -1,0 +1,21 @@
+# 이미지 변환 서비스 (Rust, c-image-service, 포트 8091)
+# cwebp/dwebp/gif2webp(webp 패키지), avifenc(libavif-bin), ffmpeg 는 apt로 설치돼 PATH에 있다.
+[Unit]
+Description=Luminous image service (c-image-service, :8091)
+After=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__APP_DIR__/services/c-image-service/bin
+Environment=IMAGE_SERVICE_PORT=8091
+Environment=IMAGE_SERVICE_ALLOWED_ROOT=__APP_DIR__/static
+Environment=FFMPEG_PATH=/usr/bin/ffmpeg
+ExecStart=__APP_DIR__/go-server/bin/watchdog -exe __APP_DIR__/services/c-image-service/bin/pastellive-image-service -log __APP_DIR__/services/c-image-service/logs/service.log -health http://127.0.0.1:8091/health
+Restart=always
+RestartSec=3
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

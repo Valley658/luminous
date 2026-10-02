@@ -1,0 +1,8 @@
+[Unit]
+Description=Luminous apply new builds (*.new -> live binary)
+
+[Service]
+Type=oneshot
+User=__USER__
+Group=__GROUP__
+ExecStart=__APP_DIR__/scripts/watch_and_apply.sh

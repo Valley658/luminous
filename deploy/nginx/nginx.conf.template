@@ -1,11 +1,16 @@
-worker_processes  1;
+user  www-data;
+worker_processes  auto;
+pid  /run/nginx.pid;
+error_log  /var/log/nginx/error.log warn;
+include /etc/nginx/modules-enabled/*.conf;
 
 events {
-    worker_connections  1024;
+    worker_connections  4096;
+    multi_accept on;
 }
 
 http {
-    include       C:/nginx/conf/mime.types;
+    include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
 
     server_names_hash_bucket_size 64;
@@ -27,8 +32,8 @@ http {
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
-    ssl_certificate     C:/nginx/certs/pastellive_origin.pem;
-    ssl_certificate_key C:/nginx/certs/pastellive_origin.key;
+    ssl_certificate     /etc/nginx/certs/pastellive_origin.pem;
+    ssl_certificate_key /etc/nginx/certs/pastellive_origin.key;
 
     log_format timing '$remote_addr - [$time_local] "$request" $status '
                        'rt=$request_time uct=$upstream_connect_time urt=$upstream_response_time '
@@ -57,7 +62,7 @@ http {
         application/xml+rss
         image/svg+xml;
 
-    proxy_cache_path C:/nginx/proxy_cache levels=1:2 keys_zone=api_cache:20m max_size=200m inactive=10m use_temp_path=off;
+    proxy_cache_path /var/cache/nginx/pastellive levels=1:2 keys_zone=api_cache:20m max_size=200m inactive=10m use_temp_path=off;
 
     proxy_cache_key "$scheme$host$request_uri";
 
@@ -99,7 +104,7 @@ http {
     # Host: pastellive.co.kr 로 접근하는" 우회를 막지 못한다(Host를 정확히
     # 맞춰서 보내면 그대로 아래 실제 서버 블록에 도달함). 그건 이 conf 파일
     # 로는 원천적으로 막을 수 없고, OS 방화벽에서 80/443을 Cloudflare IP
-    # 대역에서 오는 연결만 허용하도록 제한해야 한다(scripts\setup_cloudflare_firewall.ps1 참고).
+    # 대역에서 오는 연결만 허용하도록 제한해야 한다(deploy/linux/install_all.sh 10 = ufw 방화벽 참고).
     server {
         listen       80 default_server;
         listen       443 ssl default_server;
@@ -126,7 +131,7 @@ http {
         add_header Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()" always;
         add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.youtube.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data:; img-src 'self' data: blob: https://*.ytimg.com https://img.youtube.com https://encrypted-tbn0.gstatic.com https://lh3.googleusercontent.com https://www.gravatar.com https://pbs.twimg.com https://i.namu.wiki https://github.com https://avatars.githubusercontent.com; media-src 'self' blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://drive.google.com https://chzzk.naver.com; connect-src 'self' https://*.ytimg.com https://cloudflareinsights.com https://static.cloudflareinsights.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri /api/csp-report;" always;
 
-        access_log  C:/nginx/logs/timing.log  timing;
+        access_log  /var/log/nginx/timing.log  timing;
 
         root __PROJECT_DIR__;
 
@@ -229,7 +234,7 @@ http {
 
         error_page   500 502 503 504  /50x.html;
         location = /50x.html {
-            root   C:/nginx/html;
+            root   /usr/share/nginx/html;
         }
     }
 
@@ -264,7 +269,7 @@ http {
 
         error_page   500 502 503 504  /50x.html;
         location = /50x.html {
-            root   C:/nginx/html;
+            root   /usr/share/nginx/html;
         }
     }
 
@@ -299,7 +304,7 @@ http {
 
         error_page   500 502 503 504  /50x.html;
         location = /50x.html {
-            root   C:/nginx/html;
+            root   /usr/share/nginx/html;
         }
     }
 
@@ -350,7 +355,7 @@ http {
 
         error_page   500 502 503 504  /50x.html;
         location = /50x.html {
-            root   C:/nginx/html;
+            root   /usr/share/nginx/html;
         }
     }
 

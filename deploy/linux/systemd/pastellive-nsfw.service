@@ -1,0 +1,23 @@
+# 팬아트/커뮤니티 AI 자동 검수 (Python + NudeNet, 포트 8095)
+# 파이썬 가상환경: services/nsfw-service/runtime/venv (install_all.sh 8 이 만든다)
+# 모델을 처음 불러오는 데 시간이 걸려서 헬스체크 유예를 2분으로 둔다.
+[Unit]
+Description=Luminous NSFW moderation service (:8095)
+After=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__APP_DIR__/services/nsfw-service
+Environment=NSFW_SERVICE_PORT=8095
+Environment=NSFW_SERVICE_ALLOWED_ROOT=__APP_DIR__/static
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONIOENCODING=utf-8
+ExecStart=__APP_DIR__/go-server/bin/watchdog -exe __APP_DIR__/services/nsfw-service/bin/run_nsfw.sh -cwd __APP_DIR__/services/nsfw-service -log __APP_DIR__/services/nsfw-service/logs/service.log -health http://127.0.0.1:8095/health -health-grace 120s
+Restart=always
+RestartSec=3
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

@@ -1,15 +1,19 @@
-services/nsfw-service/runtime/** linguist-vendored
-services/c-image-service/tools/** linguist-vendored
+# 리눅스 스크립트/설정은 항상 LF 줄바꿈 (Windows 에서 커밋해도 CRLF 로 바뀌지 않게)
+*.sh        text eol=lf
+*.service   text eol=lf
+*.timer     text eol=lf
+*.path      text eol=lf
+*.cnf       text eol=lf
+*.template  text eol=lf
+deploy/linux/logrotate-pastellive text eol=lf
+
 static/js/dist/** linguist-generated
 tools/assembly/**/*.wasm linguist-generated
 static/wasm/**/*.wasm linguist-generated
 
-services/nsfw-service/runtime/**/*.pyd filter=lfs diff=lfs merge=lfs -text
-services/nsfw-service/runtime/**/*.dll filter=lfs diff=lfs merge=lfs -text
-services/nsfw-service/runtime/**/*.onnx filter=lfs diff=lfs merge=lfs -text
-services/nsfw-service/runtime/**/*.exe filter=lfs diff=lfs merge=lfs -text
-go-server/bin/*.exe filter=lfs diff=lfs merge=lfs -text
-services/c-image-service/bin/*.exe filter=lfs diff=lfs merge=lfs -text
-services/c-image-service/tools/*.exe filter=lfs diff=lfs merge=lfs -text
-services/phash-service/bin/*.exe filter=lfs diff=lfs merge=lfs -text
+# 리눅스 실행 파일(빌드 결과)은 Git LFS 로 올린다
+go-server/bin/pastellive-server filter=lfs diff=lfs merge=lfs -text
+go-server/bin/watchdog filter=lfs diff=lfs merge=lfs -text
+services/c-image-service/bin/pastellive-image-service filter=lfs diff=lfs merge=lfs -text
+services/phash-service/bin/pastellive-phash-service filter=lfs diff=lfs merge=lfs -text
 static/vrm/**/*.vrm filter=lfs diff=lfs merge=lfs -text

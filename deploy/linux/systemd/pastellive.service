@@ -1,0 +1,21 @@
+# 루미너스 Go 웹서버 (포트 8081)
+# watchdog가 서버를 띄우고, 헬스체크 실패/실행 파일 교체(새 빌드)를 감지하면 알아서 다시 띄운다.
+# 로그: go-server/logs/service.log (watchdog가 10MB마다 자동으로 나눔)
+[Unit]
+Description=Luminous Go web server (pastellive, :8081)
+After=network-online.target mysql.service meilisearch.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__APP_DIR__/go-server/bin
+ExecStart=__APP_DIR__/go-server/bin/watchdog -exe __APP_DIR__/go-server/bin/pastellive-server -log __APP_DIR__/go-server/logs/service.log -health http://127.0.0.1:8081/api/live_status
+Restart=always
+RestartSec=3
+KillMode=control-group
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

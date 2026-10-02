@@ -1,0 +1,24 @@
+# 검색 엔진 Meilisearch (127.0.0.1:7700)
+# 마스터 키는 /etc/pastellive/meilisearch.env 에 있다(.env 의 MEILISEARCH_KEY 와 같은 값).
+[Unit]
+Description=Meilisearch for Luminous (:7700)
+After=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+EnvironmentFile=/etc/pastellive/meilisearch.env
+Environment=MEILI_DB_PATH=/var/lib/meilisearch/data
+Environment=MEILI_DUMP_DIR=/var/lib/meilisearch/dumps
+Environment=MEILI_HTTP_ADDR=127.0.0.1:7700
+Environment=MEILI_ENV=production
+Environment=MEILI_NO_ANALYTICS=true
+WorkingDirectory=/var/lib/meilisearch
+ExecStart=/usr/local/bin/meilisearch
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

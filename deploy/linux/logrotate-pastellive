@@ -1,0 +1,14 @@
+# /etc/logrotate.d/pastellive (install_all.sh 13 이 __APP_DIR__ 를 바꿔서 설치)
+# 서비스 로그(service.log)는 watchdog가 10MB마다 직접 나누므로 여기서는 나머지 로그만 정리한다.
+# nginx 로그(/var/log/nginx/*.log, timing.log 포함)는 Ubuntu 기본 /etc/logrotate.d/nginx 가 처리한다.
+__APP_DIR__/logs/*.log {
+    su __USER__ __GROUP__
+    weekly
+    rotate 8
+    maxsize 20M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}

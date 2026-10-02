@@ -65,8 +65,8 @@ func (a *App) ApiAdminStatsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // [2026-09-27] 버그 수정: 관리자 대시보드 "서버 로그"가 항상 "로그가 없습니다"만
-// 떴던 원인 - 실제 service.log는 watchdog.exe가 go-server\logs\service.log 에
-// 쓰는데(bin\.._run_server_watchdog.bat 참고), 이 핸들러는 Cfg.ProjectDir(=go-server의
+// 떴던 원인 - 실제 service.log는 watchdog가 go-server/logs/service.log 에
+// 쓰는데(deploy/linux/systemd/pastellive.service 참고), 이 핸들러는 Cfg.ProjectDir(=go-server의
 // 부모 폴더, 즉 저장소 루트) 밑의 logs\service.log를 보고 있었음 - 그 경로엔 다른
 // 로그(디스코드봇, 배포 로그)만 있고 service.log는 없어서 매번 파일이 없는 것으로
 // 처리됨. go-server\logs를 먼저 찾아보고, 없으면(다른 배포 구조 대비) 기존 경로로

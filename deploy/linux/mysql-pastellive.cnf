@@ -1,0 +1,11 @@
+# /etc/mysql/mysql.conf.d/zz-pastellive.cnf (install_all.sh 2 가 버퍼 크기를 RAM의 40%로 채워서 설치)
+# Windows 때 _tune_mysql 이 하던 것과 같은 튜닝: 버퍼 풀 + 느린 쿼리 로그 + utf8mb4
+[mysqld]
+innodb_buffer_pool_size = __BUFFER_MB__M
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/mysql-slow.log
+long_query_time = 1
+character-set-server = utf8mb4
+collation-server = utf8mb4_0900_ai_ci
+bind-address = 127.0.0.1
+mysqlx-bind-address = 127.0.0.1

@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -110,6 +110,9 @@ func runOnce(exePath, workDir, logPath, healthURL string, healthGrace time.Durat
 
 	cmd := exec.Command(exePath)
 	cmd.Dir = workDir
+	// 자식을 새 프로세스 그룹으로 띄워서, 재시작할 때 자식이 만든 손자 프로세스
+	// (예: run_nsfw.sh -> python)까지 그룹째 한 번에 정리할 수 있게 한다.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = logf
 	cmd.Stderr = logf
 	if err := cmd.Start(); err != nil {
@@ -163,26 +166,24 @@ func describeExit(waitErr error) string {
 }
 
 func terminate(cmd *exec.Cmd, done chan error) {
-	// 감시 대상(-exe)이 .bat 파일이면 실제로 뜨는 건 cmd.exe -> (그 안에서 또
-	// python.exe 같은) 손자 프로세스 구조가 됨. cmd.Process.Kill()은 직계
-	// 자식(cmd.exe)만 죽이고 그 밑의 손자 프로세스는 그대로 살아남아서, MeloTTS
-	// 처럼 무거운 파이썬 프로세스가 파일(.pyd/.dll)을 계속 붙잡은 채 고아로
-	// 남는 문제가 있었음 - taskkill /T로 프로세스 트리 전체를 같이 죽인다.
-	if cmd.Process != nil {
-		killTree(cmd.Process.Pid)
+	// 감시 대상(-exe)이 셸 스크립트면 실제 서비스는 그 밑의 손자 프로세스
+	// (예: run_nsfw.sh -> python)라서, 직계 자식만 죽이면 손자가 포트를 붙잡은 채
+	// 고아로 남는다. 자식은 Setpgid로 자기 프로세스 그룹을 갖고 있으니 그룹 전체에
+	// SIGTERM을 보내 정상 종료할 기회를 주고, 10초 안에 안 끝나면 SIGKILL.
+	if cmd.Process == nil {
+		return
 	}
+	pgid := cmd.Process.Pid
+	_ = syscall.Kill(-pgid, syscall.SIGTERM)
 	select {
 	case <-done:
 	case <-time.After(10 * time.Second):
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
+		_ = syscall.Kill(-pgid, syscall.SIGKILL)
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
 		}
 	}
-}
-
-func killTree(pid int) {
-	killCmd := exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(pid))
-	_ = killCmd.Run()
 }
 
 func exeMtime(path string) time.Time {
