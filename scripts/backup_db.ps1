@@ -2,7 +2,7 @@
 # ============================================================================
 # MySQL DB 자동 백업 스크립트
 #
-# pastellive_db, lumi_db를 mysqldump로 덤프해서 backups\db\ 아래에 압축(zip)
+# pastellive_db를 mysqldump로 덤프해서 backups\db\ 아래에 압축(zip)
 # 저장하고, 오래된 백업은 자동으로 지웁니다(기본 14일 보관).
 #
 # 사람이 직접 실행하는 게 아니라, setup_db_backup.bat로 등록해두는
@@ -56,7 +56,6 @@ $DbPort = if ($envVars['DB_PORT']) { $envVars['DB_PORT'] } else { '3306' }
 $DbUser = if ($envVars['DB_USER']) { $envVars['DB_USER'] } else { 'root' }
 $DbPass = $envVars['DB_PASSWORD']
 $DbName = if ($envVars['DB_NAME']) { $envVars['DB_NAME'] } else { 'pastellive_db' }
-$LumiDbName = if ($envVars['LUMI_DB_NAME']) { $envVars['LUMI_DB_NAME'] } else { 'lumi_db' }
 
 if ($envVars['DB_BACKEND'] -and $envVars['DB_BACKEND'] -ne 'mysql') {
     Write-Log "[정보] DB_BACKEND=$($envVars['DB_BACKEND']) (MySQL이 아님) - 이 백업 스크립트는 MySQL 전용이라 건너뜁니다."
@@ -121,7 +120,6 @@ function Backup-Database {
 }
 
 Backup-Database -Name $DbName
-Backup-Database -Name $LumiDbName
 
 # ---- 오래된 백업 정리 --------------------------------------------------------
 $cutoff = (Get-Date).AddDays(-$RetentionDays)
