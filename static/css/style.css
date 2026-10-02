@@ -379,19 +379,6 @@ body {
   margin-left: 0
 }
 
-/* 오른쪽에 루미 AI 채팅 칸(#lumiChatWrap, templates/index.html)이 보이는 넓은 화면에서만
-   그만큼 콘텐츠 오른쪽 여백을 확보해서 서로 겹치지 않게 한다. */
-@media (min-width: 1400px) {
-  .content {
-    margin-right: 380px;
-    transition: margin-right .25s ease;
-  }
-  /* 루미 칸을 접었을 때(오른쪽 탭 버튼으로) 콘텐츠가 그 공간을 다시 차지하게 함 */
-  body.lumi-sidebar-hidden .content {
-    margin-right: 0;
-  }
-}
-
 .content-header-wrapper {
   position: relative;
   width: 100%;

@@ -79,17 +79,6 @@ func main() {
 	}
 	defer database.Close()
 
-	// 루미(AI 마스코트) 대화 기록은 사이트 본 DB와 완전히 분리된 자기만의
-	// DB(cfg.LumiDBName, 기본 "lumi_db")에 저장한다.
-	lumiDatabase, err := pdb.OpenLumi(cfg)
-	if err != nil {
-		log.Fatalf("루미 DB 연결 실패: %v", err)
-	}
-	defer lumiDatabase.Close()
-	if err := models.InitLumiChatHistoryTable(lumiDatabase); err != nil {
-		log.Fatalf("루미 DB의 lumi_chat_history 테이블 초기화 실패: %v", err)
-	}
-
 	if err := models.InitUsersTable(database); err != nil {
 		log.Fatalf("users 테이블 초기화 실패: %v", err)
 	}
@@ -195,8 +184,7 @@ func main() {
 	}
 
 	sessionStore := session.NewStore(cfg.SecretKey, cfg.CookieSecure, cfg.CookieDomain)
-	app := handlers.New(database, lumiDatabase, cfg, sessionStore)
-	app.WarmUpLocalAI()
+	app := handlers.New(database, cfg, sessionStore)
 
 	rateLimiter := plmw.NewRateLimiter(cfg.RateLimitEnabled, cfg.RateLimitWindowSec, cfg.RateLimitMaxRequests, cfg.RateLimitBanMinutes)
 	app.RateLimiter = rateLimiter
@@ -324,7 +312,6 @@ func main() {
 		go video.ResubscribeAllChannels(context.Background(), database, cfg.WebSubCallbackBase, cfg.WebSubSecret)
 	}
 	app.StartBackgroundScheduler()
-	app.StartLumiVoiceWarmup() // 루미 고정 멘트 미리 녹음 (VOICESTUDIO_VOICE 설정 시에만 동작)
 
 	r.Get("/admin/stats", app.AdminStatsPageHandler)
 	r.Get("/api/admin/stats", app.ApiAdminStatsHandler)
@@ -359,12 +346,6 @@ func main() {
 	r.Post("/api/schedules", app.ApiCreateScheduleHandler)
 	r.Put("/api/schedules/{scheduleID}", app.ApiUpdateScheduleHandler)
 	r.Delete("/api/schedules/{scheduleID}", app.ApiDeleteScheduleHandler)
-
-	r.Post("/api/lumi/ask", app.ApiLumiAskHandler)
-	r.Get("/api/lumi/history", app.ApiLumiHistoryHandler)
-	r.Delete("/api/lumi/history", app.ApiLumiHistoryDeleteHandler)
-	r.Get("/api/lumi/voice/status", app.ApiLumiVoiceStatusHandler)
-	r.Post("/api/lumi/voice", app.ApiLumiVoiceHandler)
 
 	r.Get("/share/{contentType}/{contentID}", app.SharePageHandler)
 	r.Get("/sw.js", app.ServiceWorkerHandler)

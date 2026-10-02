@@ -12,9 +12,7 @@ import (
 // After a from-scratch database this left ~13 tables (and a few extra
 // columns on `users`) missing, breaking attendance, fanart, highlights,
 // kirinuki archive, notifications, schedules, search trends, watch
-// history/comment likes/playlists and the shorts cache. (Lumi chat history
-// used to be recovered here too, but as of 2026-09-25 it lives in its own
-// separate database - see InitLumiChatHistoryTable in lumi_chat.go.)
+// history/comment likes/playlists and the shorts cache.
 //
 // This is a one-time recovery shim: it is intentionally verbose/explicit
 // (one CREATE TABLE per feature, mirroring the SQLite definitions in each
@@ -165,11 +163,6 @@ func InitMySQLMissingTables(d *pdb.DB) error {
 	for _, chID := range KirinukiSeedChannelIDs {
 		_, _ = d.Exec("INSERT IGNORE INTO kirinuki_channels (channel_id, channel_name) VALUES (?, ?)", chID, "키리누키")
 	}
-
-	// --- lumi_chat.go: lumi_chat_history ---
-	// [2026-09-25: 루미 대화 기록은 이제 여기(본 DB)가 아니라 별도의 루미
-	// 전용 DB(pdb.OpenLumi/cfg.LumiDBName)에서 InitLumiChatHistoryTable이
-	// 직접 만든다 - 아래 중복 생성을 지웠다.]
 
 	// --- notifications.go: notifications ---
 	_, _ = d.Exec(`CREATE TABLE IF NOT EXISTS notifications (

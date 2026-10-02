@@ -19,12 +19,6 @@ type Config struct {
 	MySQLPass  string
 	MySQLName  string
 
-	// 루미(AI 마스코트) 대화 기록 전용 DB - 사이트 본 DB(MySQLName/SQLitePath)와
-	// 완전히 분리된 별도 데이터베이스. 같은 MySQL 서버/계정을 재사용하되 DB
-	// 이름만 다르다(MySQL은 DB 단위로만 분리 가능 - 별도 서버까지는 아님).
-	LumiDBName     string
-	LumiSQLitePath string
-
 	SecretKey string
 
 	DiscordClientID     string
@@ -57,17 +51,6 @@ type Config struct {
 	PhashServiceURL         string
 	PhashServiceTimeout     time.Duration
 	PhashDuplicateThreshold int
-
-	MemberIDServiceURL     string
-	MemberIDServiceTimeout time.Duration
-
-	OllamaURL        string
-	OllamaModel      string
-	OllamaTimeout    time.Duration
-	OllamaNumPredict int
-
-	WebSearchEnabled bool
-	WebSearchTimeout time.Duration
 
 	RateLimitEnabled     bool
 	RateLimitWindowSec   int
@@ -242,9 +225,6 @@ func Load(projectDir string) *Config {
 		MySQLPass:  getenv("DB_PASSWORD", ""),
 		MySQLName:  getenv("DB_NAME", "stelive_db"),
 
-		LumiDBName:     getenv("LUMI_DB_NAME", "lumi_db"),
-		LumiSQLitePath: getenv("LUMI_SQLITE_DB_PATH", filepath.Join(dbDir, "lumi_db.db")),
-
 		SecretKey: getenv("SECRET_KEY", ""),
 
 		DiscordClientID:     getenv("DISCORD_OAUTH_CLIENT_ID", ""),
@@ -275,36 +255,6 @@ func Load(projectDir string) *Config {
 		PhashServiceURL:         getenv("PHASH_SERVICE_URL", "http://127.0.0.1:8096"),
 		PhashServiceTimeout:     time.Duration(getenvInt("PHASH_SERVICE_TIMEOUT_SEC", 5)) * time.Second,
 		PhashDuplicateThreshold: getenvInt("PHASH_DUPLICATE_THRESHOLD", 6),
-
-		// 루미 AI 채팅에 방문자가 사진을 올렸을 때, 그 사진 속 스텔라이브
-		// 멤버가 누구인지 알아맞혀주는 로컬 전용 서비스(services/member-id-service,
-		// 설치는 사진인식_설치.bat). 꺼져 있으면 사진 없이 텍스트 질문만
-		// 계속 정상 동작함(lumi_ai.go 참고).
-		MemberIDServiceURL:     getenv("MEMBER_ID_SERVICE_URL", "http://127.0.0.1:8098"),
-		MemberIDServiceTimeout: time.Duration(getenvInt("MEMBER_ID_SERVICE_TIMEOUT_SEC", 25)) * time.Second,
-
-		// 루미 마스코트 AI 대화 기능용 로컬 LLM(Ollama) 연결 설정.
-		// 외부 API 키 없이 같은 서버에서 돌아가는 Ollama를 사용함.
-		OllamaURL:     getenv("OLLAMA_URL", "http://127.0.0.1:11434"),
-		OllamaModel:   getenv("OLLAMA_MODEL", "qwen2.5:3b-instruct-q4_K_M"),
-		OllamaTimeout: time.Duration(getenvInt("OLLAMA_TIMEOUT_SEC", 90)) * time.Second,
-		// 답변을 길게 하도록(3~6문장) 프롬프트를 바꾸면서 토큰을 더 많이 생성하게
-		// 됐는데, CPU 전용 서버에서는 토큰 수만큼 그대로 추론 시간/CPU 사용량이
-		// 늘어난다. 하드웨어 사정에 맞게 재배포 없이 .env에서 바로 조절할 수
-		// 있게 환경변수로 뺌 - CPU가 버거우면 이 값을 줄이면 됨(예: 140).
-		// [2026-09-22: 220이었을 때 파이썬 코드처럼 조금만 길어져도 답변이
-		// 중간에 뚝 끊기는 문제가 있었음(마크다운 코드블록도 닫는 ``` 가 안
-		// 나와서 렌더링이 깨짐). num_predict는 "최대 길이"일 뿐 모델이 스스로
-		// 끝났다고 판단하면 그 전에 멈추니, 짧은 답은 그대로 짧게 끝나고 긴
-		// 답만 끝까지 나올 여유가 생긴다 - 값을 올려도 짧은 질문의 응답 속도는
-		// 거의 그대로임.]
-		OllamaNumPredict: getenvInt("OLLAMA_NUM_PREDICT", 700),
-
-		// 루미 AI가 답변 전에 짧게 웹 검색을 해서 최신/정확한 정보를 참고하게 할지.
-		// Selenium 같은 브라우저 자동화 없이 순수 HTTP로만 동작함 (자세한 설명은
-		// internal/websearch 패키지 참고).
-		WebSearchEnabled: getenvBool("WEB_SEARCH_ENABLED", true),
-		WebSearchTimeout: time.Duration(getenvInt("WEB_SEARCH_TIMEOUT_SEC", 6)) * time.Second,
 
 		// [2026-09-25] 리도님 요청으로 요청 제한(rate limit) 기능을 완전히 껐습니다
 		// (일반 요청 제한 + 로그인/회원가입 무차별 대입 방지 제한 둘 다 - 같은

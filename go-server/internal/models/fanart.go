@@ -460,27 +460,6 @@ func GetFanartByUser(d *pdb.DB, userID int64) ([]map[string]any, error) {
 	return out, rows.Err()
 }
 
-// GetRandomActiveFanart는 승인(활성) 상태인 팬아트 중 하나를 무작위로 골라
-// 돌려준다. 루미가 "팬갤러리 보여줘" 같은 요청을 받았을 때 실제 사진 한 장을
-// 대화 중에 보여주기 위해 씀 - LLM한테 이미지 URL을 지어내게 하는 게 아니라
-// DB에서 진짜로 하나 뽑아오는 방식.
-func GetRandomActiveFanart(d *pdb.DB) (imageURL string, title, nickname sql.NullString, found bool, err error) {
-	orderExpr := "RANDOM()"
-	if d.Backend == "mysql" {
-		orderExpr = "RAND()"
-	}
-	qerr := d.QueryRow(
-		"SELECT image_url, title, nickname FROM fanart_gallery WHERE status = 'active' ORDER BY "+orderExpr+" LIMIT 1",
-	).Scan(&imageURL, &title, &nickname)
-	if qerr == sql.ErrNoRows {
-		return "", sql.NullString{}, sql.NullString{}, false, nil
-	}
-	if qerr != nil {
-		return "", sql.NullString{}, sql.NullString{}, false, qerr
-	}
-	return imageURL, title, nickname, true, nil
-}
-
 func sqlDtFmt(d *pdb.DB, col string) string {
 	if d.Backend == "mysql" {
 		return "DATE_FORMAT(" + col + ", '%Y-%m-%d %H:%i')"
